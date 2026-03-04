@@ -25,7 +25,7 @@ import {
   type TocEntry,
   isPluginConfig,
 } from './types';
-import { parseFrontmatter, shouldPublish } from './frontmatter';
+import { parseFrontmatter, shouldPublish } from '../util/frontmatter';
 import {
   filePathToSlug,
   parseAllLinks,
@@ -35,7 +35,7 @@ import {
   calculateReadingTime,
   headingToSlug,
   validateSlug,
-} from './utils';
+} from '../util/utils';
 
 /**
  * Parses a markdown file into structured NoteContent
@@ -53,7 +53,7 @@ export async function parseMarkdown(
 ): Promise<NoteContent> {
   const startTime = Date.now();
   const warnings: ParseWarning[] = [];
-  
+
   // Default options
   const opts: Required<ParserOptions> = {
     basePath: options.basePath || 'content',
@@ -67,17 +67,17 @@ export async function parseMarkdown(
     slugify: options.slugify || ((fp) => filePathToSlug(fp, opts.basePath)),
     plugins: options.plugins || [],
   };
-  
+
   // Generate slug
   const slug = opts.slugify(filePath);
-  
+
   // Initialize partial note for plugins
   const note: Partial<NoteContent> = {
     slug,
     filePath,
     warnings,
   };
-  
+
   try {
     // Run beforeParse hooks
     let processedContent = content;
@@ -86,18 +86,18 @@ export async function parseMarkdown(
         processedContent = await plugin.beforeParse(processedContent, filePath);
       }
     }
-    
+
     // Step 1: Parse frontmatter
     const frontmatterResult = parseFrontmatter(processedContent);
     warnings.push(...frontmatterResult.warnings);
     note.frontmatter = frontmatterResult.data;
-    
+
     // Step 2: Extract links from raw markdown (before processing)
     const linkDetails = parseAllLinks(frontmatterResult.content);
     const links = extractLinkSlugs(linkDetails);
     note.linkDetails = linkDetails;
     note.links = links;
-    
+
     // Step 3: Validate links if requested
     if (opts.validateLinks && opts.availableSlugs.size > 0) {
       for (const link of linkDetails) {
@@ -118,14 +118,14 @@ export async function parseMarkdown(
         }
       }
     }
-    
+
     // Step 4: Build unified processor pipeline
     let processor: any = unified()
       .use(remarkParse) // Parse markdown to mdast
       .use(remarkGfm) // GitHub Flavored Markdown
       .use(remarkMath) // Math support
       .use(remarkFrontmatter); // Parse frontmatter nodes
-    
+
     // Step 5: Apply remark plugins from user plugins
     for (const plugin of opts.plugins) {
       if (plugin.remarkPlugins) {
@@ -138,15 +138,15 @@ export async function parseMarkdown(
         }
       }
     }
-    
+
     // Step 6: Convert to HTML AST (mdast -> hast)
     processor = processor.use(remarkRehype, {
       allowDangerousHtml: true, // Preserve HTML in markdown
     });
-    
+
     // Step 7: Process raw HTML nodes
     processor = processor.use(rehypeRaw);
-    
+
     // Step 8: Apply rehype plugins from user plugins
     for (const plugin of opts.plugins) {
       if (plugin.rehypePlugins) {
@@ -159,24 +159,24 @@ export async function parseMarkdown(
         }
       }
     }
-    
+
     // Step 9: Parse and transform the content
     // First parse markdown to MDAST
     const mdast = processor.parse(frontmatterResult.content);
     // Then run transformations to get HAST
     const contentAst = (await processor.run(mdast)) as HastRoot;
     note.contentAst = contentAst;
-    
+
     // Step 10: Extract table of contents
     if (opts.extractToc) {
       note.tableOfContents = extractTableOfContents(contentAst);
     }
-    
+
     // Step 11: Generate excerpt
     if (opts.generateExcerpt) {
       note.excerpt = generateExcerpt(frontmatterResult.content, opts.excerptLength);
     }
-    
+
     // Step 12: Compute content statistics
     if (opts.computeStats) {
       note.stats = computeContentStats(contentAst, frontmatterResult.content);
@@ -191,14 +191,14 @@ export async function parseMarkdown(
         readingTime: 0,
       };
     }
-    
+
     // Step 13: Run plugin extractData hooks
     for (const plugin of opts.plugins) {
       if (plugin.extractData) {
         await plugin.extractData(contentAst, note);
       }
     }
-    
+
     // Step 14: Finalize note content
     const finalNote: NoteContent = {
       slug: note.slug!,
@@ -213,14 +213,14 @@ export async function parseMarkdown(
       tableOfContents: note.tableOfContents,
       // Preserve any custom properties added by plugins
       ...Object.keys(note).reduce((acc, key) => {
-        if (!['slug', 'filePath', 'frontmatter', 'contentAst', 'links', 'linkDetails', 
-              'excerpt', 'stats', 'warnings', 'tableOfContents'].includes(key)) {
+        if (!['slug', 'filePath', 'frontmatter', 'contentAst', 'links', 'linkDetails',
+          'excerpt', 'stats', 'warnings', 'tableOfContents'].includes(key)) {
           acc[key] = (note as any)[key];
         }
         return acc;
       }, {} as any),
     };
-    
+
     // Step 15: Run afterParse hooks
     let processedNote = finalNote;
     for (const plugin of opts.plugins) {
@@ -228,9 +228,9 @@ export async function parseMarkdown(
         processedNote = await plugin.afterParse(processedNote);
       }
     }
-    
+
     return processedNote;
-    
+
   } catch (error) {
     // Handle parsing errors
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -239,11 +239,11 @@ export async function parseMarkdown(
       message: `Failed to parse markdown: ${errorMessage}`,
       severity: 'error',
     });
-    
+
     if (opts.strict) {
       throw error;
     }
-    
+
     // Return minimal valid note on error
     return {
       slug,
@@ -276,33 +276,33 @@ export async function parseMarkdown(
 export function extractTableOfContents(ast: HastRoot): TocEntry[] {
   const toc: TocEntry[] = [];
   const stack: { entry: TocEntry; depth: number }[] = [];
-  
+
   visit(ast, 'element', (node: Element) => {
     // Check if it's a heading (h1-h6)
     const match = node.tagName.match(/^h([1-6])$/);
     if (!match) return;
-    
+
     const depth = parseInt(match[1]!, 10);
-    
+
     // Extract text content from heading
     const text = extractTextFromNode(node);
     if (!text) return;
-    
+
     // Generate anchor slug
     const anchorSlug = headingToSlug(text);
-    
+
     const entry: TocEntry = {
       depth,
       text,
       slug: anchorSlug,
       children: [],
     };
-    
+
     // Find parent in stack
     while (stack.length > 0 && stack[stack.length - 1]!.depth >= depth) {
       stack.pop();
     }
-    
+
     if (stack.length === 0) {
       // Top-level heading
       toc.push(entry);
@@ -314,10 +314,10 @@ export function extractTableOfContents(ast: HastRoot): TocEntry[] {
       }
       parent.children.push(entry);
     }
-    
+
     stack.push({ entry, depth });
   });
-  
+
   return toc;
 }
 
@@ -329,17 +329,17 @@ export function extractTableOfContents(ast: HastRoot): TocEntry[] {
  */
 function extractTextFromNode(node: any): string {
   let text = '';
-  
+
   if (node.type === 'text') {
     return node.value || '';
   }
-  
+
   if (node.children) {
     for (const child of node.children) {
       text += extractTextFromNode(child);
     }
   }
-  
+
   return text;
 }
 
@@ -354,7 +354,7 @@ export function computeContentStats(ast: HastRoot, rawContent: string): ContentS
   let headings = 0;
   let codeBlocks = 0;
   let images = 0;
-  
+
   // Count elements in AST
   visit(ast, 'element', (node: Element) => {
     if (/^h[1-6]$/.test(node.tagName)) {
@@ -368,17 +368,17 @@ export function computeContentStats(ast: HastRoot, rawContent: string): ContentS
       images++;
     }
   });
-  
+
   // Extract plain text for word count
   const plainText = extractTextFromNode(ast);
   const words = countWords(plainText);
   const characters = plainText.replace(/\s/g, '').length;
   const readingTime = calculateReadingTime(words);
-  
+
   // Count links (from raw content to catch wikilinks)
   const linkMatches = rawContent.match(/(\[\[.*?\]\]|\[.*?\]\(.*?\))/g);
   const links = linkMatches ? linkMatches.length : 0;
-  
+
   return {
     words,
     characters,
@@ -402,24 +402,24 @@ export async function parseMultiple(
   options: ParserOptions = {}
 ): Promise<NoteContent[]> {
   const notes: NoteContent[] = [];
-  
+
   // First pass: collect all slugs for link validation
   if (options.validateLinks && !options.availableSlugs) {
     const slugify = options.slugify || ((fp) => filePathToSlug(fp, options.basePath || 'content'));
     options.availableSlugs = new Set(files.map(f => slugify(f.filePath)));
   }
-  
+
   // Parse all files in parallel
   const results = await Promise.allSettled(
     files.map(file => parseMarkdown(file.content, file.filePath, options))
   );
-  
+
   for (const result of results) {
     if (result.status === 'fulfilled') {
       notes.push(result.value);
     }
   }
-  
+
   return notes;
 }
 
@@ -435,12 +435,12 @@ export function buildBacklinks(notes: NoteContent[]): void {
   for (const note of notes) {
     noteMap.set(note.slug, note);
   }
-  
+
   // Initialize backlinks arrays
   for (const note of notes) {
     note.backlinks = [];
   }
-  
+
   // Build backlinks
   for (const note of notes) {
     for (const linkedSlug of note.links) {
@@ -490,7 +490,7 @@ export function sortNotes(
   if (typeof sortBy === 'function') {
     return [...notes].sort(sortBy);
   }
-  
+
   return [...notes].sort((a, b) => {
     switch (sortBy) {
       case 'date': {

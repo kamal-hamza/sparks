@@ -16,6 +16,9 @@ coverage/
 *.lcov
 .nyc_output/
 
+# Public Folder
+public/
+
 # Logs
 logs/
 *.log

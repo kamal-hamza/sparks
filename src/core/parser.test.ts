@@ -13,14 +13,14 @@ import {
   extractTableOfContents,
   computeContentStats,
 } from './parser';
-import { defaultPlugins } from './plugins';
+import { defaultPlugins } from '../plugins/index';
 import type { NoteContent } from './types';
 
 describe('parseMarkdown', () => {
   test('parses basic markdown', async () => {
     const content = '# Hello World\n\nThis is a test.';
     const note = await parseMarkdown(content, 'test.md');
-    
+
     expect(note.slug).toBe('test');
     expect(note.filePath).toBe('test.md');
     expect(note.contentAst).toBeDefined();
@@ -30,7 +30,7 @@ describe('parseMarkdown', () => {
   test('parses markdown with frontmatter', async () => {
     const content = '---\ntitle: Test Note\ntags: [test, demo]\n---\n\n# Content\n\nSome text.';
     const note = await parseMarkdown(content, 'test.md');
-    
+
     expect(note.frontmatter.title).toBe('Test Note');
     expect(note.frontmatter.tags).toEqual(['test', 'demo']);
   });
@@ -40,7 +40,7 @@ describe('parseMarkdown', () => {
     const note = await parseMarkdown(content, 'test.md', {
       plugins: defaultPlugins,
     });
-    
+
     expect(note.links).toContain('other-note');
     expect(note.links).toContain('another-note');
     expect(note.linkDetails).toHaveLength(2);
@@ -49,7 +49,7 @@ describe('parseMarkdown', () => {
   test('extracts table of contents', async () => {
     const content = '# H1\n\n## H2-1\n\n### H3\n\n## H2-2';
     const note = await parseMarkdown(content, 'test.md', { extractToc: true });
-    
+
     expect(note.tableOfContents).toBeDefined();
     expect(note.tableOfContents!.length).toBeGreaterThan(0);
   });
@@ -57,7 +57,7 @@ describe('parseMarkdown', () => {
   test('generates excerpt', async () => {
     const content = '# Title\n\nThis is the first paragraph that should be excerpted.';
     const note = await parseMarkdown(content, 'test.md', { generateExcerpt: true });
-    
+
     expect(note.excerpt).toBeDefined();
     expect(note.excerpt).toContain('first paragraph');
   });
@@ -65,7 +65,7 @@ describe('parseMarkdown', () => {
   test('computes content stats', async () => {
     const content = '# Heading\n\nSome words here.\n\n## Another\n\n```js\ncode\n```';
     const note = await parseMarkdown(content, 'test.md', { computeStats: true });
-    
+
     expect(note.stats.words).toBeGreaterThan(0);
     expect(note.stats.headings).toBeGreaterThanOrEqual(2);
     expect(note.stats.codeBlocks).toBeGreaterThanOrEqual(1);
@@ -76,14 +76,14 @@ describe('parseMarkdown', () => {
     const note = await parseMarkdown(content, 'test.md', {
       plugins: defaultPlugins,
     });
-    
+
     expect(note).toBeDefined();
   });
 
   test('handles empty content', async () => {
     const content = '';
     const note = await parseMarkdown(content, 'empty.md');
-    
+
     expect(note.slug).toBe('empty');
     // Empty content triggers warnings (missing frontmatter, empty content)
     expect(note.warnings.length).toBeGreaterThanOrEqual(0);
@@ -92,7 +92,7 @@ describe('parseMarkdown', () => {
   test('handles only frontmatter', async () => {
     const content = '---\ntitle: Test\n---';
     const note = await parseMarkdown(content, 'test.md');
-    
+
     expect(note.frontmatter.title).toBe('Test');
   });
 
@@ -102,8 +102,8 @@ describe('parseMarkdown', () => {
       validateLinks: true,
       availableSlugs: new Set(['existingnote']),
     });
-    
-    const brokenLinkWarning = note.warnings.find(w => 
+
+    const brokenLinkWarning = note.warnings.find(w =>
       w.type === 'broken-link' && w.message.includes('missingnote')
     );
     expect(brokenLinkWarning).toBeDefined();
@@ -112,7 +112,7 @@ describe('parseMarkdown', () => {
   test('handles malformed frontmatter gracefully', async () => {
     const content = '---\ninvalid yaml\n  broken\n---\n\nContent';
     const note = await parseMarkdown(content, 'test.md', { strict: false });
-    
+
     expect(note).toBeDefined();
     expect(note.warnings.some(w => w.type === 'invalid-yaml')).toBe(true);
   });
@@ -120,14 +120,14 @@ describe('parseMarkdown', () => {
   test('processes nested folder paths', async () => {
     const content = '# Test';
     const note = await parseMarkdown(content, 'folder/subfolder/test.md');
-    
+
     expect(note.slug).toBe('folder/subfolder/test');
   });
 
   test('handles index files correctly', async () => {
     const content = '# Index';
     const note = await parseMarkdown(content, 'folder/index.md');
-    
+
     expect(note.slug).toBe('folder');
   });
 
@@ -137,7 +137,7 @@ describe('parseMarkdown', () => {
     const note = await parseMarkdown(content, 'test.md', {
       slugify: customSlugify,
     });
-    
+
     expect(note.slug).toBe('custom-test');
   });
 });
@@ -147,7 +147,7 @@ describe('extractTableOfContents', () => {
     const content = '# H1\n## H2\n### H3';
     const note = await parseMarkdown(content, 'test.md');
     const toc = extractTableOfContents(note.contentAst);
-    
+
     expect(toc).toBeDefined();
     expect(toc.length).toBeGreaterThan(0);
   });
@@ -156,7 +156,7 @@ describe('extractTableOfContents', () => {
     const content = '# H1\n## H2-1\n### H3\n## H2-2';
     const note = await parseMarkdown(content, 'test.md');
     const toc = extractTableOfContents(note.contentAst);
-    
+
     const h1 = toc[0];
     expect(h1?.children).toBeDefined();
     expect(h1?.children!.length).toBeGreaterThan(0);
@@ -166,7 +166,7 @@ describe('extractTableOfContents', () => {
     const content = '# My Heading Title';
     const note = await parseMarkdown(content, 'test.md');
     const toc = extractTableOfContents(note.contentAst);
-    
+
     expect(toc[0]?.slug).toBe('my-heading-title');
   });
 
@@ -174,7 +174,7 @@ describe('extractTableOfContents', () => {
     const content = 'No headings here.';
     const note = await parseMarkdown(content, 'test.md');
     const toc = extractTableOfContents(note.contentAst);
-    
+
     expect(toc).toHaveLength(0);
   });
 });
@@ -184,7 +184,7 @@ describe('computeContentStats', () => {
     const content = 'One two three four five';
     const note = await parseMarkdown(content, 'test.md');
     const stats = computeContentStats(note.contentAst, content);
-    
+
     expect(stats.words).toBe(5);
   });
 
@@ -192,7 +192,7 @@ describe('computeContentStats', () => {
     const content = '# H1\n## H2\n### H3\n# Another H1';
     const note = await parseMarkdown(content, 'test.md');
     const stats = computeContentStats(note.contentAst, content);
-    
+
     expect(stats.headings).toBeGreaterThanOrEqual(4);
   });
 
@@ -200,7 +200,7 @@ describe('computeContentStats', () => {
     const content = '```js\ncode\n```\n\nMore text\n\n```python\nmore code\n```';
     const note = await parseMarkdown(content, 'test.md');
     const stats = computeContentStats(note.contentAst, content);
-    
+
     expect(stats.codeBlocks).toBeGreaterThanOrEqual(2);
   });
 
@@ -208,7 +208,7 @@ describe('computeContentStats', () => {
     const content = '[[Link1]] [[Link2]] [MD](url)';
     const note = await parseMarkdown(content, 'test.md');
     const stats = computeContentStats(note.contentAst, content);
-    
+
     expect(stats.links).toBeGreaterThanOrEqual(3);
   });
 
@@ -216,7 +216,7 @@ describe('computeContentStats', () => {
     const content = 'word '.repeat(200); // 200 words = 1 minute
     const note = await parseMarkdown(content, 'test.md');
     const stats = computeContentStats(note.contentAst, content);
-    
+
     expect(stats.readingTime).toBeGreaterThanOrEqual(1);
   });
 });
@@ -228,7 +228,7 @@ describe('parseMultiple', () => {
       { content: '# Note 2', filePath: 'note2.md' },
       { content: '# Note 3', filePath: 'note3.md' },
     ];
-    
+
     const notes = await parseMultiple(files);
     expect(notes).toHaveLength(3);
     expect(notes[0]?.slug).toBe('note1');
@@ -240,9 +240,9 @@ describe('parseMultiple', () => {
       { content: '[[note2]]', filePath: 'note1.md' },
       { content: 'Content', filePath: 'note2.md' },
     ];
-    
+
     const notes = await parseMultiple(files, { validateLinks: true });
-    
+
     // note1 should have no broken link warnings for note2
     const note1 = notes[0];
     const brokenLinks = note1?.warnings.filter(w => w.type === 'broken-link');
@@ -259,7 +259,7 @@ describe('parseMultiple', () => {
       { content: '# Valid', filePath: 'valid.md' },
       { content: '---\ninvalid\n---\nContent', filePath: 'invalid.md' },
     ];
-    
+
     const notes = await parseMultiple(files, { strict: false });
     expect(notes.length).toBeGreaterThan(0);
   });
@@ -272,10 +272,10 @@ describe('buildBacklinks', () => {
       { content: '[[note3]]', filePath: 'note2.md' },
       { content: 'No links', filePath: 'note3.md' },
     ];
-    
+
     const notes = await parseMultiple(files);
     buildBacklinks(notes);
-    
+
     const note3 = notes.find(n => n.slug === 'note3');
     expect(note3?.backlinks).toContain('note1');
     expect(note3?.backlinks).toContain('note2');
@@ -286,10 +286,10 @@ describe('buildBacklinks', () => {
       { content: 'No links', filePath: 'note1.md' },
       { content: 'No links', filePath: 'note2.md' },
     ];
-    
+
     const notes = await parseMultiple(files);
     buildBacklinks(notes);
-    
+
     expect(notes[0]?.backlinks).toHaveLength(0);
     expect(notes[1]?.backlinks).toHaveLength(0);
   });
@@ -299,10 +299,10 @@ describe('buildBacklinks', () => {
       { content: '[External](https://example.com)', filePath: 'note1.md' },
       { content: 'Content', filePath: 'note2.md' },
     ];
-    
+
     const notes = await parseMultiple(files);
     buildBacklinks(notes);
-    
+
     // No backlinks should be created for external links
     expect(notes.every(n => n.backlinks?.length === 0)).toBe(true);
   });
@@ -314,12 +314,12 @@ describe('filterNotes', () => {
       { content: '---\ntags: [keep]\n---\nContent', filePath: 'keep.md' },
       { content: '---\ntags: [remove]\n---\nContent', filePath: 'remove.md' },
     ];
-    
+
     const notes = await parseMultiple(files);
-    const filtered = filterNotes(notes, note => 
+    const filtered = filterNotes(notes, note =>
       (note.frontmatter.tags as string[])?.includes('keep')
     );
-    
+
     expect(filtered).toHaveLength(1);
     expect(filtered[0]?.slug).toBe('keep');
   });
@@ -328,7 +328,7 @@ describe('filterNotes', () => {
     const files = [{ content: '# Test', filePath: 'test.md' }];
     const notes = await parseMultiple(files);
     const filtered = filterNotes(notes, () => false);
-    
+
     expect(filtered).toHaveLength(0);
   });
 });
@@ -340,10 +340,10 @@ describe('getPublishedNotes', () => {
       { content: '---\npublish: false\n---\nDraft', filePath: 'draft.md' },
       { content: 'Default', filePath: 'default.md' },
     ];
-    
+
     const notes = await parseMultiple(files);
     const published = getPublishedNotes(notes);
-    
+
     // Default is to publish
     expect(published.length).toBeGreaterThanOrEqual(2);
     expect(published.some(n => n.slug === 'draft')).toBe(false);
@@ -354,10 +354,10 @@ describe('getPublishedNotes', () => {
       { content: '---\ndraft: true\n---\nDraft', filePath: 'draft.md' },
       { content: '---\ndraft: false\n---\nPublished', filePath: 'pub.md' },
     ];
-    
+
     const notes = await parseMultiple(files);
     const published = getPublishedNotes(notes);
-    
+
     expect(published.some(n => n.slug === 'draft')).toBe(false);
     expect(published.some(n => n.slug === 'pub')).toBe(true);
   });
@@ -370,10 +370,10 @@ describe('sortNotes', () => {
       { content: '# A', filePath: 'a.md' },
       { content: '# B', filePath: 'b.md' },
     ];
-    
+
     const notes = await parseMultiple(files);
     const sorted = sortNotes(notes, 'slug');
-    
+
     expect(sorted[0]?.slug).toBe('a');
     expect(sorted[1]?.slug).toBe('b');
     expect(sorted[2]?.slug).toBe('c');
@@ -385,10 +385,10 @@ describe('sortNotes', () => {
       { content: '---\ntitle: Apple\n---\n', filePath: 'b.md' },
       { content: '---\ntitle: Banana\n---\n', filePath: 'c.md' },
     ];
-    
+
     const notes = await parseMultiple(files);
     const sorted = sortNotes(notes, 'title');
-    
+
     expect(sorted[0]?.frontmatter.title).toBe('Apple');
     expect(sorted[1]?.frontmatter.title).toBe('Banana');
     expect(sorted[2]?.frontmatter.title).toBe('Zebra');
@@ -400,10 +400,10 @@ describe('sortNotes', () => {
       { content: '---\ndate: 2024-03-01\n---\n', filePath: 'b.md' },
       { content: '---\ndate: 2024-02-01\n---\n', filePath: 'c.md' },
     ];
-    
+
     const notes = await parseMultiple(files);
     const sorted = sortNotes(notes, 'date');
-    
+
     const dates = sorted.map(n => n.frontmatter.date as string);
     expect(new Date(dates[0]!) >= new Date(dates[1]!)).toBe(true);
     expect(new Date(dates[1]!) >= new Date(dates[2]!)).toBe(true);
@@ -414,10 +414,10 @@ describe('sortNotes', () => {
       { content: '# Note', filePath: 'a.md' },
       { content: '# Note', filePath: 'b.md' },
     ];
-    
+
     const notes = await parseMultiple(files);
     const sorted = sortNotes(notes, (a, b) => b.slug.localeCompare(a.slug));
-    
+
     expect(sorted[0]?.slug).toBe('b');
     expect(sorted[1]?.slug).toBe('a');
   });
@@ -427,11 +427,11 @@ describe('sortNotes', () => {
       { content: '# B', filePath: 'b.md' },
       { content: '# A', filePath: 'a.md' },
     ];
-    
+
     const notes = await parseMultiple(files);
     const originalFirst = notes[0]?.slug;
     sortNotes(notes, 'slug');
-    
+
     expect(notes[0]?.slug).toBe(originalFirst);
   });
 });

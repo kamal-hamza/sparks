@@ -3,7 +3,7 @@
  */
 
 import path from 'path';
-import type { LinkInfo, LinkType } from './types';
+import type { LinkInfo, LinkType } from '../core/types';
 
 /**
  * Converts a file path to a URL-safe slug

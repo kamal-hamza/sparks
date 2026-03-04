@@ -12,7 +12,7 @@ export {
   sortNotes,
   extractTableOfContents,
   computeContentStats,
-} from './parser';
+} from './core/parser';
 
 // Frontmatter utilities
 export {
@@ -26,7 +26,7 @@ export {
   shouldPublish,
   serializeFrontmatter,
   updateFrontmatter,
-} from './frontmatter';
+} from './util/frontmatter';
 
 // Path and link utilities
 export {
@@ -46,7 +46,7 @@ export {
   getFileExtension,
   isMarkdownFile,
   normalizePath,
-} from './utils';
+} from './util/utils';
 
 // Plugins
 export {
@@ -57,8 +57,8 @@ export {
   tagExtractorPlugin,
   readingTimePlugin,
   linkValidatorPlugin,
-  mdxComponentPlugin,
   defaultPlugins,
+  powerUserPlugins,
   createPlugin,
 } from './plugins';
 
@@ -75,17 +75,19 @@ export type {
   RehypePlugin,
   PluginConfig,
   FullStackPlugin,
+  PluginDeclaration,
   ParserOptions,
   ParseResult,
   GraphData,
   ParserConfig,
+  SparksConfig,
   PluginContext,
   MaybePromise,
-} from './types';
+} from './core/types';
 
 export {
   isPluginConfig,
   isInternalLink,
   isExternalLink,
   LinkType as LinkTypeEnum,
-} from './types';
+} from './core/types';

@@ -11,7 +11,7 @@ import {
   buildBacklinks,
   getPublishedNotes,
   sortNotes,
-} from './parser';
+} from './core/parser';
 import { defaultPlugins } from './plugins';
 
 const contentDir = join(process.cwd(), 'content');
@@ -23,13 +23,13 @@ describe('Real Content Integration Tests', () => {
     const note = await parseMarkdown(content, 'Dart.md', {
       plugins: defaultPlugins,
     });
-    
+
     expect(note.slug).toBe('dart');
     expect(note.frontmatter.title).toBe('Dart');
     expect(note.frontmatter.publish).toBe(true);
     expect(note.stats.words).toBeGreaterThan(100);
     expect(note.stats.headings).toBeGreaterThan(5);
-    
+
     // Check for expected links to Flutter
     expect(note.links).toContain('flutter');
   });
@@ -40,12 +40,12 @@ describe('Real Content Integration Tests', () => {
     const note = await parseMarkdown(content, 'Flutter.md', {
       plugins: defaultPlugins,
     });
-    
+
     expect(note.slug).toBe('flutter');
     expect(note.frontmatter.title).toBe('Flutter');
     expect(note.stats.words).toBeGreaterThan(100);
     expect(note.stats.codeBlocks).toBeGreaterThan(0);
-    
+
     // Check for expected links to Dart
     expect(note.links).toContain('dart');
   });
@@ -56,7 +56,7 @@ describe('Real Content Integration Tests', () => {
     const note = await parseMarkdown(content, 'index.md', {
       plugins: defaultPlugins,
     });
-    
+
     expect(note.slug).toBe('index');
     expect(note.frontmatter.title).toContain('Hamza');
     expect(note.links.length).toBeGreaterThan(10); // Has many wikilinks
@@ -68,7 +68,7 @@ describe('Real Content Integration Tests', () => {
     const note = await parseMarkdown(content, 'example.md', {
       plugins: defaultPlugins,
     });
-    
+
     expect(note.slug).toBe('example');
     expect(note.frontmatter.title).toBe('Welcome to Quartz');
     expect(note.frontmatter.tags).toContain('example');
@@ -81,12 +81,12 @@ describe('Real Content Integration Tests', () => {
     const note = await parseMarkdown(content, 'Programming Languages/JavaScript/JS Fundamentals.md', {
       plugins: defaultPlugins,
     });
-    
+
     expect(note.slug).toBe('programming-languages/javascript/js-fundamentals');
     expect(note.frontmatter.publish).toBe(true);
     expect(note.stats.words).toBeGreaterThan(500);
     expect(note.stats.headings).toBeGreaterThan(20);
-    
+
     // Has links to other pages
     expect(note.links.length).toBeGreaterThan(0);
   });
@@ -95,23 +95,23 @@ describe('Real Content Integration Tests', () => {
     // Parse Dart and Flutter which link to each other
     const dartPath = join(contentDir, 'Dart.md');
     const flutterPath = join(contentDir, 'Flutter.md');
-    
+
     const dartContent = await readFile(dartPath, 'utf-8');
     const flutterContent = await readFile(flutterPath, 'utf-8');
-    
+
     const notes = await parseMultiple([
       { content: dartContent, filePath: 'Dart.md' },
       { content: flutterContent, filePath: 'Flutter.md' },
     ]);
-    
+
     buildBacklinks(notes);
-    
+
     const dart = notes.find(n => n.slug === 'dart');
     const flutter = notes.find(n => n.slug === 'flutter');
-    
+
     // Dart links to Flutter, so Flutter should have Dart as backlink
     expect(flutter?.backlinks).toContain('dart');
-    
+
     // Flutter links to Dart, so Dart should have Flutter as backlink
     expect(dart?.backlinks).toContain('flutter');
   });
@@ -121,15 +121,15 @@ describe('Real Content Integration Tests', () => {
       { content: await readFile(join(contentDir, 'Dart.md'), 'utf-8'), filePath: 'Dart.md' },
       { content: await readFile(join(contentDir, 'Flutter.md'), 'utf-8'), filePath: 'Flutter.md' },
     ];
-    
+
     const notes = await parseMultiple(files, {
       validateLinks: true,
       plugins: defaultPlugins,
     });
-    
+
     // These files link to each other, so no broken link warnings
     const dart = notes.find(n => n.slug === 'dart');
-    const brokenLinks = dart?.warnings.filter(w => 
+    const brokenLinks = dart?.warnings.filter(w =>
       w.type === 'broken-link' && w.message.includes('flutter')
     );
     expect(brokenLinks).toHaveLength(0);
@@ -140,7 +140,7 @@ describe('Real Content Integration Tests', () => {
     async function findMarkdownFiles(dir: string): Promise<string[]> {
       const files: string[] = [];
       const entries = await readdir(dir, { withFileTypes: true });
-      
+
       for (const entry of entries) {
         const fullPath = join(dir, entry.name);
         if (entry.isDirectory() && entry.name !== '.obsidian' && entry.name !== 'node_modules') {
@@ -149,30 +149,30 @@ describe('Real Content Integration Tests', () => {
           files.push(fullPath);
         }
       }
-      
+
       return files;
     }
-    
+
     const mdFiles = await findMarkdownFiles(contentDir);
     const testFiles = mdFiles.slice(0, 10); // Test first 10 files
-    
+
     const files = await Promise.all(
       testFiles.map(async (filePath) => ({
         content: await readFile(filePath, 'utf-8'),
         filePath: filePath.replace(contentDir + '/', ''),
       }))
     );
-    
+
     const notes = await parseMultiple(files, {
       plugins: defaultPlugins,
       strict: false, // Don't fail on warnings
     });
-    
+
     expect(notes.length).toBe(files.length);
-    
+
     // All notes should have valid slugs
     expect(notes.every(n => n.slug.length > 0)).toBe(true);
-    
+
     // Log summary
     console.log(`\n✅ Successfully parsed ${notes.length} real notes:`);
     notes.forEach(note => {
@@ -187,10 +187,10 @@ describe('Real Content Integration Tests', () => {
       extractToc: true,
       plugins: defaultPlugins,
     });
-    
+
     expect(note.tableOfContents).toBeDefined();
     expect(note.tableOfContents!.length).toBeGreaterThan(0);
-    
+
     // Check that TOC entries have the expected structure
     const firstEntry = note.tableOfContents![0];
     expect(firstEntry?.depth).toBeGreaterThanOrEqual(1);
@@ -206,7 +206,7 @@ describe('Real Content Integration Tests', () => {
       excerptLength: 150,
       plugins: defaultPlugins,
     });
-    
+
     expect(note.excerpt).toBeDefined();
     expect(note.excerpt!.length).toBeLessThanOrEqual(154); // 150 + '...'
     expect(note.excerpt).not.toContain('---'); // No frontmatter
@@ -218,10 +218,10 @@ describe('Real Content Integration Tests', () => {
       { content: await readFile(join(contentDir, 'Dart.md'), 'utf-8'), filePath: 'Dart.md' },
       { content: await readFile(join(contentDir, 'Flutter.md'), 'utf-8'), filePath: 'Flutter.md' },
     ];
-    
+
     const notes = await parseMultiple(files);
     const published = getPublishedNotes(notes);
-    
+
     // Both Dart and Flutter have publish: true
     expect(published.length).toBe(2);
   });
@@ -232,15 +232,15 @@ describe('Real Content Integration Tests', () => {
       { content: await readFile(join(contentDir, 'Flutter.md'), 'utf-8'), filePath: 'Flutter.md' },
       { content: await readFile(join(contentDir, 'example.md'), 'utf-8'), filePath: 'example.md' },
     ];
-    
+
     const notes = await parseMultiple(files);
-    
+
     // Sort by slug
     const bySlug = sortNotes(notes, 'slug');
     expect(bySlug[0]?.slug).toBe('dart');
     expect(bySlug[1]?.slug).toBe('example');
     expect(bySlug[2]?.slug).toBe('flutter');
-    
+
     // Sort by title
     const byTitle = sortNotes(notes, 'title');
     expect(byTitle[0]?.frontmatter.title).toBe('Dart');
@@ -254,7 +254,7 @@ describe('Real Content Integration Tests', () => {
     const note = await parseMarkdown(content, 'Dart.md', {
       plugins: defaultPlugins,
     });
-    
+
     expect(note.stats.codeBlocks).toBeGreaterThan(0);
   });
 
@@ -264,7 +264,7 @@ describe('Real Content Integration Tests', () => {
     const note = await parseMarkdown(content, 'index.md', {
       plugins: defaultPlugins,
     });
-    
+
     // index.md has MDX components like <Experience /> and <Projects />
     expect(note).toBeDefined();
   });
@@ -275,7 +275,7 @@ describe('Real Content Integration Tests', () => {
     const note = await parseMarkdown(content, 'Dart.md', {
       plugins: defaultPlugins,
     });
-    
+
     // Dart.md has > [!info] callout blocks
     expect(note).toBeDefined();
   });
@@ -291,11 +291,11 @@ Links:
 - [[Link#section|With Both]]
 - ![[Embed]]
 `;
-    
+
     const note = await parseMarkdown(content, 'test.md', {
       plugins: defaultPlugins,
     });
-    
+
     expect(note.linkDetails.length).toBe(5);
     expect(note.linkDetails.some(l => l.isEmbed)).toBe(true);
     expect(note.linkDetails.some(l => l.displayText !== undefined)).toBe(true);

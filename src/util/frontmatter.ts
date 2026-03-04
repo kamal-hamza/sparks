@@ -3,7 +3,7 @@
  */
 
 import matter from 'gray-matter';
-import type { FrontmatterData, ParseWarning } from './types';
+import type { FrontmatterData, ParseWarning } from '../core/types';
 
 /**
  * Result of frontmatter parsing
@@ -38,18 +38,18 @@ export function parseFrontmatter(content: string): FrontmatterParseResult {
   let data: FrontmatterData = {};
   let cleanContent = content;
   let excerpt: string | undefined;
-  
+
   try {
     const result = matter(content);
     data = result.data as FrontmatterData;
     cleanContent = result.content;
     excerpt = result.excerpt;
-    
+
     // Normalize tags
     if (data.tags) {
       data.tags = normalizeTags(data.tags);
     }
-    
+
     // Normalize date
     if (data.date) {
       const normalized = normalizeDate(data.date);
@@ -63,7 +63,7 @@ export function parseFrontmatter(content: string): FrontmatterParseResult {
         });
       }
     }
-    
+
     // Normalize boolean fields
     if ('publish' in data) {
       data.publish = normalizeBoolean(data.publish);
@@ -71,7 +71,7 @@ export function parseFrontmatter(content: string): FrontmatterParseResult {
     if ('draft' in data) {
       data.draft = normalizeBoolean(data.draft);
     }
-    
+
     // Warn about empty frontmatter
     if (Object.keys(data).length === 0) {
       warnings.push({
@@ -80,7 +80,7 @@ export function parseFrontmatter(content: string): FrontmatterParseResult {
         severity: 'info',
       });
     }
-    
+
   } catch (error) {
     // Frontmatter parsing failed
     warnings.push({
@@ -88,14 +88,14 @@ export function parseFrontmatter(content: string): FrontmatterParseResult {
       message: `Failed to parse frontmatter: ${error instanceof Error ? error.message : 'Unknown error'}`,
       severity: 'error',
     });
-    
+
     // Try to extract content after frontmatter anyway
     const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
     if (frontmatterMatch && frontmatterMatch[2]) {
       cleanContent = frontmatterMatch[2];
     }
   }
-  
+
   return {
     data,
     content: cleanContent,
@@ -123,19 +123,19 @@ export function normalizeTags(tags: unknown): string[] {
       .map(tag => tag.trim())
       .filter(tag => tag.length > 0);
   }
-  
+
   if (Array.isArray(tags)) {
     return tags
       .filter(tag => tag != null) // Remove null/undefined
       .map(tag => String(tag).trim()) // Convert to string and trim
       .filter(tag => tag.length > 0); // Remove empty strings
   }
-  
+
   // Unexpected type, convert to string and wrap in array
   if (tags != null) {
     return [String(tags)];
   }
-  
+
   return [];
 }
 
@@ -158,7 +158,7 @@ export function normalizeDate(date: unknown): string | undefined {
     }
     return undefined;
   }
-  
+
   // Date object
   if (date instanceof Date) {
     if (!isNaN(date.getTime())) {
@@ -166,7 +166,7 @@ export function normalizeDate(date: unknown): string | undefined {
     }
     return undefined;
   }
-  
+
   // Timestamp
   if (typeof date === 'number') {
     const parsed = new Date(date);
@@ -175,7 +175,7 @@ export function normalizeDate(date: unknown): string | undefined {
     }
     return undefined;
   }
-  
+
   return undefined;
 }
 
@@ -195,16 +195,16 @@ export function normalizeBoolean(value: unknown): boolean {
   if (typeof value === 'boolean') {
     return value;
   }
-  
+
   if (typeof value === 'string') {
     const lower = value.toLowerCase().trim();
     return lower === 'true' || lower === 'yes' || lower === '1';
   }
-  
+
   if (typeof value === 'number') {
     return value !== 0;
   }
-  
+
   return Boolean(value);
 }
 
@@ -221,7 +221,7 @@ export function validateFrontmatter(
   requiredFields: string[] = []
 ): ParseWarning[] {
   const warnings: ParseWarning[] = [];
-  
+
   // Check required fields
   for (const field of requiredFields) {
     if (!(field in data) || data[field] == null) {
@@ -232,7 +232,7 @@ export function validateFrontmatter(
       });
     }
   }
-  
+
   // Validate title if present
   if ('title' in data) {
     if (typeof data.title !== 'string') {
@@ -249,7 +249,7 @@ export function validateFrontmatter(
       });
     }
   }
-  
+
   // Validate tags if present
   if ('tags' in data && !Array.isArray(data.tags) && typeof data.tags !== 'string') {
     warnings.push({
@@ -258,7 +258,7 @@ export function validateFrontmatter(
       severity: 'warning',
     });
   }
-  
+
   return warnings;
 }
 
@@ -311,12 +311,12 @@ export function shouldPublish(data: FrontmatterData): boolean {
   if ('publish' in data) {
     return normalizeBoolean(data.publish);
   }
-  
+
   // If draft is set, invert it (draft: true means don't publish)
   if ('draft' in data) {
     return !normalizeBoolean(data.draft);
   }
-  
+
   // Default to publishing
   return true;
 }

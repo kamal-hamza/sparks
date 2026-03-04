@@ -13,8 +13,9 @@ import {
   calloutPlugin,
   codeHighlightPlugin,
   defaultPlugins,
-} from './plugins';
-import { parseMarkdown } from './parser';
+  SyntaxHighlightingPlugin,
+} from './index';
+import { parseMarkdown } from '../core/parser';
 
 /**
  * Helper to get all elements of a specific type from AST
@@ -138,7 +139,7 @@ describe('wikilinkPlugin', () => {
     const link = getElements(note.contentAst, 'a')[0];
     expect(link).toBeDefined();
     expect(link?.properties?.href).toBe('/original-note');
-    
+
     // Check that display text is in children
     const textNode = link?.children.find((c: any) => c.type === 'text') as any;
     expect(textNode?.value).toBe('Display Text');
@@ -485,5 +486,38 @@ describe('custom plugin integration', () => {
     expect(note.excerpt).toContain('CCC');
     expect(note.excerpt).not.toContain('AAA');
     expect(note.excerpt).not.toContain('BBB');
+  });
+});
+
+describe('SyntaxHighlightingPlugin', () => {
+  test('adds syntax highlighting via rehype-pretty-code', async () => {
+    const content = '```typescript\nconst x: number = 1;\n```';
+    const note = await parseMarkdown(content, 'test.md', {
+      plugins: [SyntaxHighlightingPlugin()],
+    });
+
+    const figure = findElement(note.contentAst, el =>
+      el.tagName === 'figure' && 'data-rehype-pretty-code-figure' in (el.properties || {})
+    );
+    expect(figure).toBeDefined();
+
+    const pre = findElement(note.contentAst, el => el.tagName === 'pre');
+    expect(pre).toBeDefined();
+
+    // Check that there are generated spans for tokens
+    const span = findElement(note.contentAst, el => el.tagName === 'span' && 'data-line' in (el.properties || {}));
+    expect(span).toBeDefined();
+  });
+
+  test('applies custom options', async () => {
+    const content = '```python\ndef foo(): pass\n```';
+    const note = await parseMarkdown(content, 'test.md', {
+      plugins: [SyntaxHighlightingPlugin({ theme: 'dracula' })],
+    });
+
+    const figure = findElement(note.contentAst, el =>
+      el.tagName === 'figure' && 'data-rehype-pretty-code-figure' in (el.properties || {})
+    );
+    expect(figure).toBeDefined();
   });
 });

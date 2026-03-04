@@ -21,7 +21,7 @@ import {
   isMarkdownFile,
   normalizePath,
 } from './utils';
-import { LinkType } from './types';
+import { LinkType } from '../core/types';
 
 describe('filePathToSlug', () => {
   test('converts basic file path to slug', () => {

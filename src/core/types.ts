@@ -19,7 +19,7 @@ export interface FrontmatterData {
   publish?: boolean;
   draft?: boolean;
   tags?: string | string[];
-  
+
   // Allow any additional fields
   [key: string]: unknown;
 }
@@ -109,40 +109,43 @@ export interface ParseWarning {
 export interface NoteContent {
   /** URL-safe slug (e.g., "programming-languages/javascript/js-fundamentals") */
   slug: string;
-  
+
   /** Original file path relative to content directory */
   filePath: string;
-  
+
   /** Parsed frontmatter data */
   frontmatter: FrontmatterData;
-  
+
   /** The parsed HTML Abstract Syntax Tree (hast) */
   contentAst: HastRoot;
-  
+
   /** Array of slugs this note links to (for building graph) */
   links: string[];
-  
+
   /** Detailed link information */
   linkDetails: LinkInfo[];
-  
+
   /** Array of slugs that link to this note (backlinks) - populated later */
   backlinks?: string[];
-  
+
+  /** Pre-computed local graph (depth 1) for visualization */
+  localGraph?: GraphData;
+
   /** Plain text excerpt (first N characters) */
   excerpt?: string;
-  
+
   /** Content statistics */
   stats: ContentStats;
-  
+
   /** Any warnings encountered during parsing */
   warnings: ParseWarning[];
-  
+
   /** Table of contents extracted from headings */
   tableOfContents?: TocEntry[];
-  
+
   /** When the note was last modified */
   lastModified?: Date;
-  
+
   /** When the note was created */
   created?: Date;
 }
@@ -188,40 +191,40 @@ export interface PluginConfig<TOptions = any> {
 export interface FullStackPlugin {
   /** Unique identifier for the plugin */
   name: string;
-  
+
   /** Description of what the plugin does */
   description?: string;
-  
+
   /**
    * Remark plugins to apply (operates on Markdown AST)
    * Applied before conversion to HTML
    */
   remarkPlugins?: (RemarkPlugin | PluginConfig<any>)[];
-  
+
   /**
    * Rehype plugins to apply (operates on HTML AST)
    * Applied after conversion to HTML
    */
   rehypePlugins?: (RehypePlugin | PluginConfig<any>)[];
-  
+
   /**
    * Hook called before parsing starts
    * Can be used to preprocess the raw markdown
    */
   beforeParse?: (content: string, filePath: string) => string | Promise<string>;
-  
+
   /**
    * Hook called after parsing completes
    * Can be used to postprocess the NoteContent
    */
   afterParse?: (note: NoteContent) => NoteContent | Promise<NoteContent>;
-  
+
   /**
    * Hook for extracting custom data from the AST
    * Called during the parse process
    */
   extractData?: (ast: HastRoot, note: Partial<NoteContent>) => void | Promise<void>;
-  
+
   /**
    * Configuration for the plugin
    */
@@ -234,31 +237,31 @@ export interface FullStackPlugin {
 export interface ParserOptions {
   /** Base path for resolving relative links */
   basePath?: string;
-  
+
   /** Whether to extract table of contents */
   extractToc?: boolean;
-  
+
   /** Whether to generate excerpts */
   generateExcerpt?: boolean;
-  
+
   /** Excerpt length in characters */
   excerptLength?: number;
-  
+
   /** Whether to compute content statistics */
   computeStats?: boolean;
-  
+
   /** Whether to validate links */
   validateLinks?: boolean;
-  
+
   /** Available note slugs for link validation */
   availableSlugs?: Set<string>;
-  
+
   /** Whether to throw on errors or collect warnings */
   strict?: boolean;
-  
+
   /** Custom slug generation function */
   slugify?: (filePath: string) => string;
-  
+
   /** Plugins to apply */
   plugins?: FullStackPlugin[];
 }
@@ -269,16 +272,16 @@ export interface ParserOptions {
 export interface ParseResult {
   /** Successfully parsed notes */
   notes: NoteContent[];
-  
+
   /** Files that failed to parse */
   errors: Array<{
     filePath: string;
     error: Error;
   }>;
-  
+
   /** Total processing time in milliseconds */
   duration: number;
-  
+
   /** Graph data for visualization */
   graph?: GraphData;
 }
@@ -293,7 +296,7 @@ export interface GraphData {
     label: string;
     metadata?: FrontmatterData;
   }>;
-  
+
   /** Edges (links between notes) */
   edges: Array<{
     source: string;
@@ -303,24 +306,46 @@ export interface GraphData {
 }
 
 /**
+ * Format of a declarative plugin definition
+ */
+export type PluginDeclaration = string | [string, any] | FullStackPlugin;
+
+/**
+ * Configuration format for sparks.config.ts
+ */
+export interface SparksConfig {
+  /** Path to the obsidian vault */
+  vault: string;
+
+  /** Output directory */
+  outDir?: string;
+
+  /** Whether to use strict mode for failures */
+  strict?: boolean;
+
+  /** Declarative plugins to use */
+  plugins?: PluginDeclaration[];
+}
+
+/**
  * Configuration for the entire parser system
  */
 export interface ParserConfig {
   /** Content directory path */
   contentDir: string;
-  
+
   /** Output directory for generated JSON */
   outputDir?: string;
-  
+
   /** Parser options */
   options: ParserOptions;
-  
+
   /** Whether to watch for file changes */
   watch?: boolean;
-  
+
   /** File patterns to include (glob) */
   include?: string[];
-  
+
   /** File patterns to exclude (glob) */
   exclude?: string[];
 }
@@ -331,13 +356,13 @@ export interface ParserConfig {
 export interface PluginContext {
   /** The file being processed */
   file: VFile;
-  
+
   /** The unified processor */
   processor: Processor;
-  
+
   /** Parser options */
   options: ParserOptions;
-  
+
   /** Current note being built */
   note: Partial<NoteContent>;
 }
@@ -359,9 +384,9 @@ export function isPluginConfig(value: any): value is PluginConfig {
  */
 export function isInternalLink(link: LinkInfo): boolean {
   return link.type === LinkType.WIKILINK ||
-         link.type === LinkType.WIKILINK_PATH ||
-         link.type === LinkType.WIKILINK_ALIAS ||
-         link.type === LinkType.EMBED;
+    link.type === LinkType.WIKILINK_PATH ||
+    link.type === LinkType.WIKILINK_ALIAS ||
+    link.type === LinkType.EMBED;
 }
 
 /**

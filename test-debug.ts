@@ -1,5 +1,5 @@
-import { parseMarkdown } from './src/parser';
-import { defaultPlugins } from './src/plugins';
+import { parseMarkdown } from './src/core/parser';
+import { defaultPlugins } from './src/plugins/index';
 
 const content = 'Link to [[Other Note]] and [[Another Note|Display]].';
 const note = await parseMarkdown(content, 'test.md', {
