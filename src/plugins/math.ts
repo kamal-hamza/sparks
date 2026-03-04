@@ -10,13 +10,15 @@ export const mathPlugin: FullStackPlugin = {
     name: 'math',
     description: 'Renders LaTeX equations using KaTeX',
 
-    // Parse $math$ and $$math$$ blocks into the AST
-    remarkPlugins: [
-        { plugin: remarkMath }
-    ],
+    transform: {
+        // Parse $math$ and $$math$$ blocks into the AST
+        remarkPlugins: [
+            { plugin: remarkMath }
+        ],
 
-    // Transform math AST nodes into HTML spans with class="katex"
-    rehypePlugins: [
-        { plugin: rehypeKatex }
-    ]
+        // Transform math AST nodes into HTML spans with class="katex"
+        rehypePlugins: [
+            { plugin: rehypeKatex }
+        ]
+    }
 };

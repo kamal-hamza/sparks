@@ -27,8 +27,10 @@ export const PseudocodePlugin = (): FullStackPlugin => {
     return {
         name: 'pseudocode',
         description: 'Transform pseudocode blocks to specific HTML elements',
-        remarkPlugins: [
-            { plugin: remarkPseudocode } as PluginConfig,
-        ],
+        transform: {
+            remarkPlugins: [
+                { plugin: remarkPseudocode } as PluginConfig,
+            ],
+        }
     };
 };

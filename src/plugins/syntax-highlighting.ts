@@ -23,8 +23,10 @@ export const SyntaxHighlightingPlugin = (userOpts?: Partial<SyntaxOptions>): Ful
     return {
         name: 'syntax-highlighting',
         description: 'VS Code quality syntax highlighting via Shiki & rehype-pretty-code',
-        rehypePlugins: [
-            { plugin: rehypePrettyCode, options: opts } as PluginConfig<CodeOptions>
-        ]
+        transform: {
+            rehypePlugins: [
+                { plugin: rehypePrettyCode, options: opts } as PluginConfig<CodeOptions>
+            ]
+        }
     };
 };

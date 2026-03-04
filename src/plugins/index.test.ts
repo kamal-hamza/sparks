@@ -173,10 +173,11 @@ describe('wikilinkPlugin', () => {
       plugins: [wikilinkPlugin],
     });
 
-    const embed = getElements(note.contentAst, 'span').find(el =>
-      hasClass(el, 'embed')
+    const embed = getElements(note.contentAst, 'img').find(el =>
+      hasClass(el, 'asset-embed')
     );
     expect(embed).toBeDefined();
+    expect(embed?.properties?.src).toBe('/api/assets/image.png');
   });
 
   test('handles multiple wikilinks in one paragraph', async () => {
@@ -432,9 +433,11 @@ describe('custom plugin integration', () => {
   test('custom beforeParse hook modifies content', async () => {
     const customPlugin = {
       name: 'test-preprocessor',
-      beforeParse: async (content: string) => {
-        return content.replace(/CUSTOM/g, 'Replaced');
-      },
+      transform: {
+        beforeParse: async (content: string) => {
+          return content.replace(/CUSTOM/g, 'Replaced');
+        },
+      }
     };
 
     const note = await parseMarkdown('Text with CUSTOM keyword.', 'test.md', {
@@ -450,9 +453,11 @@ describe('custom plugin integration', () => {
   test('custom extractData hook adds metadata', async () => {
     const customPlugin = {
       name: 'test-metadata',
-      extractData: async (ast: any, note: any) => {
-        note.customField = 'custom-value';
-      },
+      transform: {
+        extractData: async (ast: any, note: any) => {
+          note.customField = 'custom-value';
+        },
+      }
     };
 
     const note = await parseMarkdown('# Test', 'test.md', {
@@ -465,16 +470,20 @@ describe('custom plugin integration', () => {
   test('multiple custom plugins work together', async () => {
     const plugin1 = {
       name: 'plugin1',
-      beforeParse: async (content: string) => {
-        return content.replace(/AAA/g, 'BBB');
-      },
+      transform: {
+        beforeParse: async (content: string) => {
+          return content.replace(/AAA/g, 'BBB');
+        },
+      }
     };
 
     const plugin2 = {
       name: 'plugin2',
-      beforeParse: async (content: string) => {
-        return content.replace(/BBB/g, 'CCC');
-      },
+      transform: {
+        beforeParse: async (content: string) => {
+          return content.replace(/BBB/g, 'CCC');
+        },
+      }
     };
 
     const note = await parseMarkdown('Text AAA here.', 'test.md', {

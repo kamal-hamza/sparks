@@ -14,6 +14,11 @@ export {
   computeContentStats,
 } from './core/parser';
 
+// Frontend utilities
+export {
+  extractReactComponents
+} from './core/frontend';
+
 // Frontmatter utilities
 export {
   parseFrontmatter,

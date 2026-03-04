@@ -23,12 +23,14 @@ export const CitationPlugin = (userOpts?: Partial<CitationOptions>): FullStackPl
         name: 'citation',
         description: 'Processes academic citations and generates a bibliography',
 
-        remarkPlugins: [
-            { plugin: remarkCite }
-        ],
+        transform: {
+            remarkPlugins: [
+                { plugin: remarkCite }
+            ],
 
-        rehypePlugins: [
-            { plugin: rehypeCitation, options } as PluginConfig<any>
-        ]
+            rehypePlugins: [
+                { plugin: rehypeCitation, options } as PluginConfig<any>
+            ]
+        }
     };
 };

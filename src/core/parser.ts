@@ -13,7 +13,7 @@ import rehypeRaw from 'rehype-raw';
 import { visit } from 'unist-util-visit';
 import type { Root as MdastRoot } from 'mdast';
 import type { Root as HastRoot, Element } from 'hast';
-import type { VFile } from 'vfile';
+import { VFile } from 'vfile';
 
 import {
   type NoteContent,
@@ -63,6 +63,7 @@ export async function parseMarkdown(
     computeStats: options.computeStats ?? true,
     validateLinks: options.validateLinks ?? false,
     availableSlugs: options.availableSlugs || new Set(),
+    assetBaseUrl: options.assetBaseUrl || '/api/assets',
     strict: options.strict ?? false,
     slugify: options.slugify || ((fp) => filePathToSlug(fp, opts.basePath)),
     plugins: options.plugins || [],
@@ -82,8 +83,8 @@ export async function parseMarkdown(
     // Run beforeParse hooks
     let processedContent = content;
     for (const plugin of opts.plugins) {
-      if (plugin.beforeParse) {
-        processedContent = await plugin.beforeParse(processedContent, filePath);
+      if (plugin.transform?.beforeParse) {
+        processedContent = await plugin.transform.beforeParse(processedContent, filePath);
       }
     }
 
@@ -128,8 +129,8 @@ export async function parseMarkdown(
 
     // Step 5: Apply remark plugins from user plugins
     for (const plugin of opts.plugins) {
-      if (plugin.remarkPlugins) {
-        for (const remarkPlugin of plugin.remarkPlugins) {
+      if (plugin.transform?.remarkPlugins) {
+        for (const remarkPlugin of plugin.transform.remarkPlugins) {
           if (isPluginConfig(remarkPlugin)) {
             processor = processor.use(remarkPlugin.plugin as any, remarkPlugin.options);
           } else {
@@ -149,8 +150,8 @@ export async function parseMarkdown(
 
     // Step 8: Apply rehype plugins from user plugins
     for (const plugin of opts.plugins) {
-      if (plugin.rehypePlugins) {
-        for (const rehypePlugin of plugin.rehypePlugins) {
+      if (plugin.transform?.rehypePlugins) {
+        for (const rehypePlugin of plugin.transform.rehypePlugins) {
           if (isPluginConfig(rehypePlugin)) {
             processor = processor.use(rehypePlugin.plugin as any, rehypePlugin.options);
           } else {
@@ -161,10 +162,17 @@ export async function parseMarkdown(
     }
 
     // Step 9: Parse and transform the content
+    // Create explicitly to attach parser options
+    const vfile = new VFile({
+      value: frontmatterResult.content,
+      path: filePath,
+      data: { parserOpts: opts }
+    });
+
     // First parse markdown to MDAST
-    const mdast = processor.parse(frontmatterResult.content);
+    const mdast = processor.parse(vfile);
     // Then run transformations to get HAST
-    const contentAst = (await processor.run(mdast)) as HastRoot;
+    const contentAst = (await processor.run(mdast, vfile)) as HastRoot;
     note.contentAst = contentAst;
 
     // Step 10: Extract table of contents
@@ -194,8 +202,8 @@ export async function parseMarkdown(
 
     // Step 13: Run plugin extractData hooks
     for (const plugin of opts.plugins) {
-      if (plugin.extractData) {
-        await plugin.extractData(contentAst, note);
+      if (plugin.transform?.extractData) {
+        await plugin.transform.extractData(contentAst, note);
       }
     }
 
@@ -224,8 +232,8 @@ export async function parseMarkdown(
     // Step 15: Run afterParse hooks
     let processedNote = finalNote;
     for (const plugin of opts.plugins) {
-      if (plugin.afterParse) {
-        processedNote = await plugin.afterParse(processedNote);
+      if (plugin.transform?.afterParse) {
+        processedNote = await plugin.transform.afterParse(processedNote);
       }
     }
 

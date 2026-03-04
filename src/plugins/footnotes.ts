@@ -40,11 +40,13 @@ export const FootnotesPlugin = (): FullStackPlugin => {
     return {
         name: 'footnotes',
         description: 'Provides academic footnotes with hover popover support',
-        remarkPlugins: [
-            { plugin: remarkGfm } as PluginConfig,
-        ],
-        rehypePlugins: [
-            { plugin: rehypeFootnotes } as PluginConfig,
-        ],
+        transform: {
+            remarkPlugins: [
+                { plugin: remarkGfm } as PluginConfig,
+            ],
+            rehypePlugins: [
+                { plugin: rehypeFootnotes } as PluginConfig,
+            ],
+        }
     };
 };

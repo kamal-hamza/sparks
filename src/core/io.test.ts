@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'bun:test';
 import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
-import { findMarkdownFiles, readFile, writeFile, prepareOutputDirectory } from './io';
+import { findVaultFiles, readFile, writeFile, prepareOutputDirectory } from './io';
 
 describe('IO Engine', () => {
     const testDir = path.join(process.cwd(), '.test-io-tmp');
@@ -29,11 +29,11 @@ describe('IO Engine', () => {
         await fs.rm(testDir, { recursive: true, force: true });
     });
 
-    it('should find only markdown files, ignoring hidden directories', async () => {
-        const files = await findMarkdownFiles(testDir);
-        expect(files.length).toBe(2);
+    it('should find markdown and asset files, ignoring hidden directories', async () => {
+        const result = await findVaultFiles(testDir);
+        expect(result.markdown.length).toBe(2);
 
-        const fileNames = files.map(f => path.basename(f));
+        const fileNames = result.markdown.map(f => path.basename(f));
         expect(fileNames).toContain('file1.md');
         expect(fileNames).toContain('file2.md');
         expect(fileNames).not.toContain('file3.md');

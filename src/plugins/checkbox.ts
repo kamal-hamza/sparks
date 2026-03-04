@@ -31,8 +31,10 @@ export const CheckboxPlugin = (): FullStackPlugin => {
     return {
         name: 'interactive-checkbox',
         description: 'Converts disabled markdown task lists into interactive components',
-        rehypePlugins: [
-            { plugin: rehypeCheckbox } as PluginConfig,
-        ],
+        transform: {
+            rehypePlugins: [
+                { plugin: rehypeCheckbox } as PluginConfig,
+            ],
+        }
     };
 };

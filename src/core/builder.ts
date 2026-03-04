@@ -1,6 +1,6 @@
 import * as path from 'node:path';
 import { Feed } from 'feed';
-import { findMarkdownFiles, readFile, writeFile, prepareOutputDirectory } from './io';
+import { findVaultFiles, readFile, writeFile, prepareOutputDirectory, copyAssetFile, getFileStats } from './io';
 import { parseMultiple, buildBacklinks } from './parser';
 import { defaultPlugins } from '../plugins/index';
 import { filePathToSlug } from '../util/utils';
@@ -18,6 +18,8 @@ export interface GlobalIndexEntry {
 export interface BatchProcessOptions {
     vaultPath: string;
     outputPath: string;
+    assetDir?: string;
+    assetBaseUrl?: string;
     strict?: boolean;
     plugins?: FullStackPlugin[];
 }
@@ -30,22 +32,52 @@ export async function processVault(options: BatchProcessOptions): Promise<void> 
     const startTime = Date.now();
 
     console.log(`Scanning vault at: ${vaultPath}`);
-    const files = await findMarkdownFiles(vaultPath);
-    console.log(`Found ${files.length} markdown files.`);
+    const vaultFiles = await findVaultFiles(vaultPath);
+    console.log(`Found ${vaultFiles.markdown.length} markdown files and ${vaultFiles.assets.length} static assets.`);
 
-    // Read all files
-    const fileContents = await Promise.all(
-        files.map(async (filePath) => {
-            // Create a relative path from the vault root
-            const relativePath = path.relative(vaultPath, filePath);
-            return {
+    // Load Cache
+    const cachePath = path.join(outputPath, '.sparks-cache.json');
+    let cache: Record<string, { mtimeMs: number, slug: string }> = {};
+    try {
+        const cacheContent = await readFile(cachePath);
+        cache = JSON.parse(cacheContent);
+    } catch {
+        // Cache does not exist or is invalid
+    }
+
+    const newCache: Record<string, { mtimeMs: number, slug: string }> = {};
+    const notes: NoteContent[] = [];
+    const filesToParse: Array<{ content: string; filePath: string }> = [];
+
+    // Check files against cache
+    console.log('Checking cache for unchanged files...');
+    for (const filePath of vaultFiles.markdown) {
+        const relativePath = path.relative(vaultPath, filePath);
+        const stats = await getFileStats(filePath);
+        const mtimeMs = stats.mtimeMs;
+
+        let usedCache = false;
+        if (cache[relativePath] && cache[relativePath].mtimeMs === mtimeMs) {
+            try {
+                const noteUrl = path.join(outputPath, `${cache[relativePath].slug}.json`);
+                const cachedContent = await readFile(noteUrl);
+                notes.push(JSON.parse(cachedContent));
+                newCache[relativePath] = { mtimeMs, slug: cache[relativePath].slug };
+                usedCache = true;
+            } catch {
+                // JSON read failed, fallback to parsing
+            }
+        }
+
+        if (!usedCache) {
+            filesToParse.push({
                 filePath: relativePath,
                 content: await readFile(filePath),
-            };
-        })
-    );
+            });
+        }
+    }
 
-    // Parse all files
+    // Parser options
     const parserOptions: Required<ParserOptions> = {
         basePath: '',
         extractToc: true,
@@ -53,14 +85,26 @@ export async function processVault(options: BatchProcessOptions): Promise<void> 
         excerptLength: 200,
         computeStats: true,
         validateLinks: strict ?? false,
-        availableSlugs: new Set(fileContents.map(f => filePathToSlug(f.filePath, ''))),
+        availableSlugs: new Set(vaultFiles.markdown.map(f => filePathToSlug(path.relative(vaultPath, f), ''))),
+        assetBaseUrl: options.assetBaseUrl ?? '/api/assets',
         strict: strict ?? false,
         slugify: (fp) => filePathToSlug(fp, ''),
         plugins: options.plugins && options.plugins.length > 0 ? options.plugins : defaultPlugins,
     };
 
-    console.log('Parsing markdown files...');
-    const notes = await parseMultiple(fileContents, parserOptions);
+    if (filesToParse.length > 0) {
+        console.log(`Parsing ${filesToParse.length} modified markdown files...`);
+        const parsedNotes = await parseMultiple(filesToParse, parserOptions);
+        notes.push(...parsedNotes);
+
+        // Update cache with newly parsed files
+        for (const note of parsedNotes) {
+            const stats = await getFileStats(path.join(vaultPath, note.filePath));
+            newCache[note.filePath] = { mtimeMs: stats.mtimeMs, slug: note.slug };
+        }
+    } else {
+        console.log('All files cached, skipping AST parsing.');
+    }
 
     // Build backlinks (mutates notes array)
     buildBacklinks(notes);
@@ -106,6 +150,21 @@ export async function processVault(options: BatchProcessOptions): Promise<void> 
     // Prepare output directory
     console.log(`Preparing output directory: ${outputPath}`);
     await prepareOutputDirectory(outputPath);
+
+    // Prepare asset directory
+    const assetPath = options.assetDir || path.join(outputPath, 'assets');
+    if (vaultFiles.assets.length > 0) {
+        console.log(`Preparing asset directory: ${assetPath}`);
+        await prepareOutputDirectory(assetPath);
+
+        // Copy all assets
+        console.log(`Copying ${vaultFiles.assets.length} assets...`);
+        for (const assetPathFull of vaultFiles.assets) {
+            const relativePath = path.relative(vaultPath, assetPathFull);
+            const destPath = path.join(assetPath, relativePath);
+            await copyAssetFile(assetPathFull, destPath);
+        }
+    }
 
     // Generate and write individual note JSONs
     for (const note of notes) {
@@ -217,7 +276,7 @@ export async function processVault(options: BatchProcessOptions): Promise<void> 
         language: 'en',
         favicon: 'https://example.com/favicon.ico',
         copyright: `All rights reserved ${new Date().getFullYear()}`,
-        updated: publishedNotes.length > 0 && publishedNotes[0]?.frontmatter.date 
+        updated: publishedNotes.length > 0 && publishedNotes[0]?.frontmatter.date
             ? new Date(publishedNotes[0].frontmatter.date as string)
             : new Date(),
         generator: 'Sparks',
@@ -250,10 +309,10 @@ export async function processVault(options: BatchProcessOptions): Promise<void> 
             return note.frontmatter.published === true || note.frontmatter.date;
         })
         .map(note => {
-            const lastmod = note.frontmatter.date 
+            const lastmod = note.frontmatter.date
                 ? new Date(note.frontmatter.date as string).toISOString().split('T')[0]
                 : new Date().toISOString().split('T')[0];
-            
+
             return `  <url>
     <loc>https://example.com/${note.slug}</loc>
     <lastmod>${lastmod}</lastmod>
@@ -268,6 +327,9 @@ ${sitemapEntries.join('\n')}
 </urlset>`;
 
     await writeFile(path.join(outputPath, 'sitemap.xml'), sitemap);
+
+    // Write new cache
+    await writeFile(cachePath, JSON.stringify(newCache, null, 2));
 
     const duration = Date.now() - startTime;
     console.log(`Successfully processed ${notes.length} notes in ${duration}ms!`);

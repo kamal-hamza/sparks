@@ -48,8 +48,10 @@ export const ExcalidrawPlugin = (): FullStackPlugin => {
     return {
         name: 'excalidraw',
         description: 'Renders Excalidraw notes as interactive canvas elements',
-        rehypePlugins: [
-            { plugin: rehypeExcalidraw } as PluginConfig,
-        ],
+        transform: {
+            rehypePlugins: [
+                { plugin: rehypeExcalidraw } as PluginConfig,
+            ],
+        }
     };
 };

@@ -80,8 +80,10 @@ export const CodeEnhancementsPlugin = (): FullStackPlugin => {
     return {
         name: 'code-enhancements',
         description: 'Enhances code blocks with tabs and copy buttons capability',
-        rehypePlugins: [
-            { plugin: rehypeCodeEnhancements } as PluginConfig,
-        ],
+        transform: {
+            rehypePlugins: [
+                { plugin: rehypeCodeEnhancements } as PluginConfig,
+            ],
+        }
     };
 };

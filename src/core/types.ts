@@ -196,34 +196,65 @@ export interface FullStackPlugin {
   description?: string;
 
   /**
-   * Remark plugins to apply (operates on Markdown AST)
-   * Applied before conversion to HTML
+   * ==========================================
+   * BACKEND: Executed by your build CLI
+   * ==========================================
    */
-  remarkPlugins?: (RemarkPlugin | PluginConfig<any>)[];
+  transform?: {
+    /**
+     * Remark plugins to apply (operates on Markdown AST)
+     * Applied before conversion to HTML
+     */
+    remarkPlugins?: (RemarkPlugin | PluginConfig<any>)[];
+
+    /**
+     * Rehype plugins to apply (operates on HTML AST)
+     * Applied after conversion to HTML
+     */
+    rehypePlugins?: (RehypePlugin | PluginConfig<any>)[];
+
+    /**
+     * Hook called before parsing starts
+     * Can be used to preprocess the raw markdown
+     */
+    beforeParse?: (content: string, filePath: string) => string | Promise<string>;
+
+    /**
+     * Hook called after parsing completes
+     * Can be used to postprocess the NoteContent
+     */
+    afterParse?: (note: NoteContent) => NoteContent | Promise<NoteContent>;
+
+    /**
+     * Hook for extracting custom data from the AST
+     * Called during the parse process
+     */
+    extractData?: (ast: HastRoot, note: Partial<NoteContent>) => void | Promise<void>;
+  };
 
   /**
-   * Rehype plugins to apply (operates on HTML AST)
-   * Applied after conversion to HTML
+   * ==========================================
+   * FRONTEND: Executed by your web application
+   * ==========================================
    */
-  rehypePlugins?: (RehypePlugin | PluginConfig<any>)[];
+  render?: {
+    /**
+     * React components provided by this plugin.
+     * We use `any` to avoid a core dependency on React.
+     */
+    reactComponents?: Record<string, any>;
 
-  /**
-   * Hook called before parsing starts
-   * Can be used to preprocess the raw markdown
-   */
-  beforeParse?: (content: string, filePath: string) => string | Promise<string>;
+    /**
+     * Vue components provided by this plugin.
+     * We use `any` to avoid a core dependency on Vue.
+     */
+    vueComponents?: Record<string, any>;
 
-  /**
-   * Hook called after parsing completes
-   * Can be used to postprocess the NoteContent
-   */
-  afterParse?: (note: NoteContent) => NoteContent | Promise<NoteContent>;
-
-  /**
-   * Hook for extracting custom data from the AST
-   * Called during the parse process
-   */
-  extractData?: (ast: HastRoot, note: Partial<NoteContent>) => void | Promise<void>;
+    /**
+     * Initialization hook for Web Components
+     */
+    initWebComponents?: () => void | Promise<void>;
+  };
 
   /**
    * Configuration for the plugin
@@ -255,6 +286,9 @@ export interface ParserOptions {
 
   /** Available note slugs for link validation */
   availableSlugs?: Set<string>;
+
+  /** Base URL for static assets (e.g., "/api/assets") */
+  assetBaseUrl?: string;
 
   /** Whether to throw on errors or collect warnings */
   strict?: boolean;
@@ -319,6 +353,12 @@ export interface SparksConfig {
 
   /** Output directory */
   outDir?: string;
+
+  /** Output directory for static assets */
+  assetDir?: string;
+
+  /** Base URL for static assets in the frontend */
+  assetBaseUrl?: string;
 
   /** Whether to use strict mode for failures */
   strict?: boolean;

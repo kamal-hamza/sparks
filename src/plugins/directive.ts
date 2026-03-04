@@ -34,9 +34,11 @@ export const DirectivePlugin = (): FullStackPlugin => {
   return {
     name: 'directive',
     description: 'Parses Markdown directives and transforms them into agnostic HTML tags',
-    remarkPlugins: [
-      { plugin: remarkDirective } as PluginConfig,
-      { plugin: remarkDirectiveHtml } as PluginConfig,
-    ],
+    transform: {
+      remarkPlugins: [
+        { plugin: remarkDirective } as PluginConfig,
+        { plugin: remarkDirectiveHtml } as PluginConfig,
+      ],
+    }
   };
 };

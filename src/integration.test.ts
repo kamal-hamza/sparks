@@ -136,24 +136,28 @@ describe('Real Content Integration Tests', () => {
   });
 
   test('handles all markdown files in content directory', async () => {
-    // Find all .md files recursively
-    async function findMarkdownFiles(dir: string): Promise<string[]> {
-      const files: string[] = [];
+    // Find all files recursively
+    async function findVaultFiles(dir: string): Promise<{ markdown: string[], assets: string[] }> {
+      const result: { markdown: string[], assets: string[] } = { markdown: [], assets: [] };
       const entries = await readdir(dir, { withFileTypes: true });
 
       for (const entry of entries) {
         const fullPath = join(dir, entry.name);
         if (entry.isDirectory() && entry.name !== '.obsidian' && entry.name !== 'node_modules') {
-          files.push(...await findMarkdownFiles(fullPath));
-        } else if (entry.isFile() && entry.name.endsWith('.md')) {
-          files.push(fullPath);
+          const subResult = await findVaultFiles(fullPath);
+          result.markdown.push(...subResult.markdown);
+          result.assets.push(...subResult.assets);
+        } else if (entry.isFile()) {
+          if (entry.name.endsWith('.md')) {
+            result.markdown.push(fullPath);
+          }
         }
       }
 
-      return files;
+      return result;
     }
 
-    const mdFiles = await findMarkdownFiles(contentDir);
+    const { markdown: mdFiles } = await findVaultFiles(contentDir);
     const testFiles = mdFiles.slice(0, 10); // Test first 10 files
 
     const files = await Promise.all(
