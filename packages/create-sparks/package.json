@@ -1,0 +1,21 @@
+{
+    "name": "create-sparks",
+    "version": "1.0.0",
+    "description": "Scaffold a new Sparks digital garden",
+    "type": "module",
+    "bin": {
+        "create-sparks": "./src/index.ts"
+    },
+    "scripts": {
+        "build": "bun build ./src/index.ts --compile --outfile create-sparks",
+        "dev": "bun run ./src/index.ts"
+    },
+    "dependencies": {
+        "picocolors": "^1.0.0",
+        "prompts": "^2.4.2"
+    },
+    "devDependencies": {
+        "@types/node": "^20.0.0",
+        "@types/prompts": "^2.4.4"
+    }
+}

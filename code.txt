@@ -1,0 +1,2009 @@
+import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from "./types"
+import style from "./styles/search.scss"
+// @ts-ignore
+import script from "./scripts/search.inline"
+import { classNames } from "../util/lang"
+import { i18n } from "../i18n"
+
+export interface SearchOptions {
+  enablePreview: boolean
+}
+
+const defaultOptions: SearchOptions = {
+  enablePreview: true,
+}
+
+export default ((userOpts?: Partial<SearchOptions>) => {
+  const Search: QuartzComponent = ({ displayClass, cfg }: QuartzComponentProps) => {
+    const opts = { ...defaultOptions, ...userOpts }
+    const searchPlaceholder = i18n(cfg.locale).components.search.searchBarPlaceholder
+    return (
+      <div class={classNames(displayClass, "search")}>
+        <button class="search-button">
+          <svg role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 19.9 19.7">
+            <title>Search</title>
+            <g class="search-path" fill="none">
+              <path stroke-linecap="square" d="M18.5 18.3l-5.4-5.4" />
+              <circle cx="8" cy="8" r="7" />
+            </g>
+          </svg>
+          <p>{i18n(cfg.locale).components.search.title}</p>
+        </button>
+        <div class="search-container">
+          <div class="search-space">
+            <input
+              autocomplete="off"
+              class="search-bar"
+              name="search"
+              type="text"
+              aria-label={searchPlaceholder}
+              placeholder={searchPlaceholder}
+            />
+            <div class="search-layout" data-preview={opts.enablePreview}></div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  Search.afterDOMLoaded = script
+  Search.css = style
+
+  return Search
+}) satisfies QuartzComponentConstructor
+
+
+
+
+
+
+
+
+@use "../../styles/variables.scss" as *;
+
+.search {
+  min-width: fit-content;
+  max-width: 14rem;
+  @media all and ($mobile) {
+    flex-grow: 0.3;
+  }
+
+  & > .search-button {
+    background-color: transparent;
+    border: 1px var(--lightgray) solid;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: inherit;
+    height: 2rem;
+    padding: 0 1rem 0 0;
+    display: flex;
+    align-items: center;
+    text-align: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+    width: 100%;
+
+    & > p {
+      display: inline;
+      color: var(--gray);
+      text-wrap: unset;
+    }
+
+    & svg {
+      cursor: pointer;
+      width: 18px;
+      min-width: 18px;
+      margin: 0 0.5rem;
+
+      .search-path {
+        stroke: var(--darkgray);
+        stroke-width: 1.5px;
+        transition: stroke 0.5s ease;
+      }
+    }
+  }
+
+  & > .search-container {
+    position: fixed;
+    contain: layout;
+    z-index: 999;
+    left: 0;
+    top: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow-y: auto;
+    display: none;
+    backdrop-filter: blur(4px);
+
+    &.active {
+      display: inline-block;
+    }
+
+    & > .search-space {
+      width: 65%;
+      margin-top: 12vh;
+      margin-left: auto;
+      margin-right: auto;
+
+      @media all and not ($desktop) {
+        width: 90%;
+      }
+
+      & > * {
+        width: 100%;
+        border-radius: 7px;
+        background: var(--light);
+        box-shadow:
+          0 14px 50px rgba(27, 33, 48, 0.12),
+          0 10px 30px rgba(27, 33, 48, 0.16);
+        margin-bottom: 2em;
+      }
+
+      & > input {
+        box-sizing: border-box;
+        padding: 0.5em 1em;
+        font-family: var(--bodyFont);
+        color: var(--dark);
+        font-size: 1.1em;
+        border: 1px solid var(--lightgray);
+
+        &:focus {
+          outline: none;
+        }
+      }
+
+      & > .search-layout {
+        display: none;
+        flex-direction: row;
+        border: 1px solid var(--lightgray);
+        flex: 0 0 100%;
+        box-sizing: border-box;
+
+        &.display-results {
+          display: flex;
+        }
+
+        &[data-preview] > .results-container {
+          flex: 0 0 min(30%, 450px);
+        }
+
+        @media all and not ($mobile) {
+          &[data-preview] {
+            & .result-card > p.preview {
+              display: none;
+            }
+
+            & > div {
+              &:first-child {
+                border-right: 1px solid var(--lightgray);
+                border-top-right-radius: unset;
+                border-bottom-right-radius: unset;
+              }
+
+              &:last-child {
+                border-top-left-radius: unset;
+                border-bottom-left-radius: unset;
+              }
+            }
+          }
+        }
+
+        & > div {
+          height: calc(75vh - 12vh);
+          border-radius: 5px;
+        }
+
+        @media all and ($mobile) {
+          flex-direction: column;
+
+          & > .preview-container {
+            display: none !important;
+          }
+
+          &[data-preview] > .results-container {
+            width: 100%;
+            height: auto;
+            flex: 0 0 100%;
+          }
+        }
+
+        & .highlight {
+          background: color-mix(in srgb, var(--tertiary) 60%, rgba(255, 255, 255, 0));
+          border-radius: 5px;
+          scroll-margin-top: 2rem;
+        }
+
+        & > .preview-container {
+          flex-grow: 1;
+          display: block;
+          overflow: hidden;
+          font-family: inherit;
+          color: var(--dark);
+          line-height: 1.5em;
+          font-weight: $normalWeight;
+          overflow-y: auto;
+          padding: 0 2rem;
+
+          & .preview-inner {
+            margin: 0 auto;
+            width: min($pageWidth, 100%);
+          }
+
+          a[role="anchor"] {
+            background-color: transparent;
+          }
+        }
+
+        & > .results-container {
+          overflow-y: auto;
+
+          & .result-card {
+            overflow: hidden;
+            padding: 1em;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            border-bottom: 1px solid var(--lightgray);
+            width: 100%;
+            display: block;
+            box-sizing: border-box;
+
+            // normalize card props
+            font-family: inherit;
+            font-size: 100%;
+            line-height: 1.15;
+            margin: 0;
+            text-transform: none;
+            text-align: left;
+            outline: none;
+            font-weight: inherit;
+
+            &:hover,
+            &:focus,
+            &.focus {
+              background: var(--lightgray);
+            }
+
+            & > h3 {
+              margin: 0;
+            }
+
+            @media all and not ($mobile) {
+              & > p.card-description {
+                display: none;
+              }
+            }
+
+            & > ul.tags {
+              margin-top: 0.45rem;
+              margin-bottom: 0;
+            }
+
+            & > ul > li > p {
+              border-radius: 8px;
+              background-color: var(--highlight);
+              padding: 0.2rem 0.4rem;
+              margin: 0 0.1rem;
+              line-height: 1.4rem;
+              font-weight: $boldWeight;
+              color: var(--secondary);
+
+              &.match-tag {
+                color: var(--tertiary);
+              }
+            }
+
+            & > p {
+              margin-bottom: 0;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+import FlexSearch, { DefaultDocumentSearchResults } from "flexsearch"
+import { ContentDetails } from "../../plugins/emitters/contentIndex"
+import { registerEscapeHandler, removeAllChildren } from "./util"
+import { FullSlug, normalizeRelativeURLs, resolveRelative } from "../../util/path"
+
+interface Item {
+  id: number
+  slug: FullSlug
+  title: string
+  content: string
+  tags: string[]
+  [key: string]: any
+}
+
+// Can be expanded with things like "term" in the future
+type SearchType = "basic" | "tags"
+let searchType: SearchType = "basic"
+let currentSearchTerm: string = ""
+const encoder = (str: string): string[] => {
+  const tokens: string[] = []
+  let bufferStart = -1
+  let bufferEnd = -1
+  const lower = str.toLowerCase()
+
+  let i = 0
+  for (const char of lower) {
+    const code = char.codePointAt(0)!
+
+    const isCJK =
+      (code >= 0x3040 && code <= 0x309f) ||
+      (code >= 0x30a0 && code <= 0x30ff) ||
+      (code >= 0x4e00 && code <= 0x9fff) ||
+      (code >= 0xac00 && code <= 0xd7af) ||
+      (code >= 0x20000 && code <= 0x2a6df)
+
+    const isWhitespace = code === 32 || code === 9 || code === 10 || code === 13
+
+    if (isCJK) {
+      if (bufferStart !== -1) {
+        tokens.push(lower.slice(bufferStart, bufferEnd))
+        bufferStart = -1
+      }
+      tokens.push(char)
+    } else if (isWhitespace) {
+      if (bufferStart !== -1) {
+        tokens.push(lower.slice(bufferStart, bufferEnd))
+        bufferStart = -1
+      }
+    } else {
+      if (bufferStart === -1) bufferStart = i
+      bufferEnd = i + char.length
+    }
+
+    i += char.length
+  }
+
+  if (bufferStart !== -1) {
+    tokens.push(lower.slice(bufferStart))
+  }
+
+  return tokens
+}
+
+let index = new FlexSearch.Document<Item>({
+  encode: encoder,
+  document: {
+    id: "id",
+    tag: "tags",
+    index: [
+      {
+        field: "title",
+        tokenize: "forward",
+      },
+      {
+        field: "content",
+        tokenize: "forward",
+      },
+      {
+        field: "tags",
+        tokenize: "forward",
+      },
+    ],
+  },
+})
+
+const p = new DOMParser()
+const fetchContentCache: Map<FullSlug, Element[]> = new Map()
+const contextWindowWords = 30
+const numSearchResults = 8
+const numTagResults = 5
+
+const tokenizeTerm = (term: string) => {
+  const tokens = term.split(/\s+/).filter((t) => t.trim() !== "")
+  const tokenLen = tokens.length
+  if (tokenLen > 1) {
+    for (let i = 1; i < tokenLen; i++) {
+      tokens.push(tokens.slice(0, i + 1).join(" "))
+    }
+  }
+
+  return tokens.sort((a, b) => b.length - a.length) // always highlight longest terms first
+}
+
+function highlight(searchTerm: string, text: string, trim?: boolean) {
+  const tokenizedTerms = tokenizeTerm(searchTerm)
+  let tokenizedText = text.split(/\s+/).filter((t) => t !== "")
+
+  let startIndex = 0
+  let endIndex = tokenizedText.length - 1
+  if (trim) {
+    const includesCheck = (tok: string) =>
+      tokenizedTerms.some((term) => tok.toLowerCase().startsWith(term.toLowerCase()))
+    const occurrencesIndices = tokenizedText.map(includesCheck)
+
+    let bestSum = 0
+    let bestIndex = 0
+    for (let i = 0; i < Math.max(tokenizedText.length - contextWindowWords, 0); i++) {
+      const window = occurrencesIndices.slice(i, i + contextWindowWords)
+      const windowSum = window.reduce((total, cur) => total + (cur ? 1 : 0), 0)
+      if (windowSum >= bestSum) {
+        bestSum = windowSum
+        bestIndex = i
+      }
+    }
+
+    startIndex = Math.max(bestIndex - contextWindowWords, 0)
+    endIndex = Math.min(startIndex + 2 * contextWindowWords, tokenizedText.length - 1)
+    tokenizedText = tokenizedText.slice(startIndex, endIndex)
+  }
+
+  const slice = tokenizedText
+    .map((tok) => {
+      // see if this tok is prefixed by any search terms
+      for (const searchTok of tokenizedTerms) {
+        if (tok.toLowerCase().includes(searchTok.toLowerCase())) {
+          const regex = new RegExp(searchTok.toLowerCase(), "gi")
+          return tok.replace(regex, `<span class="highlight">$&</span>`)
+        }
+      }
+      return tok
+    })
+    .join(" ")
+
+  return `${startIndex === 0 ? "" : "..."}${slice}${
+    endIndex === tokenizedText.length - 1 ? "" : "..."
+  }`
+}
+
+function highlightHTML(searchTerm: string, el: HTMLElement) {
+  const p = new DOMParser()
+  const tokenizedTerms = tokenizeTerm(searchTerm)
+  const html = p.parseFromString(el.innerHTML, "text/html")
+
+  const createHighlightSpan = (text: string) => {
+    const span = document.createElement("span")
+    span.className = "highlight"
+    span.textContent = text
+    return span
+  }
+
+  const highlightTextNodes = (node: Node, term: string) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const nodeText = node.nodeValue ?? ""
+      const regex = new RegExp(term.toLowerCase(), "gi")
+      const matches = nodeText.match(regex)
+      if (!matches || matches.length === 0) return
+      const spanContainer = document.createElement("span")
+      let lastIndex = 0
+      for (const match of matches) {
+        const matchIndex = nodeText.indexOf(match, lastIndex)
+        spanContainer.appendChild(document.createTextNode(nodeText.slice(lastIndex, matchIndex)))
+        spanContainer.appendChild(createHighlightSpan(match))
+        lastIndex = matchIndex + match.length
+      }
+      spanContainer.appendChild(document.createTextNode(nodeText.slice(lastIndex)))
+      node.parentNode?.replaceChild(spanContainer, node)
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      if ((node as HTMLElement).classList.contains("highlight")) return
+      Array.from(node.childNodes).forEach((child) => highlightTextNodes(child, term))
+    }
+  }
+
+  for (const term of tokenizedTerms) {
+    highlightTextNodes(html.body, term)
+  }
+
+  return html.body
+}
+
+async function setupSearch(searchElement: Element, currentSlug: FullSlug, data: ContentIndex) {
+  const container = searchElement.querySelector(".search-container") as HTMLElement
+  if (!container) return
+
+  const sidebar = container.closest(".sidebar") as HTMLElement | null
+
+  const searchButton = searchElement.querySelector(".search-button") as HTMLButtonElement
+  if (!searchButton) return
+
+  const searchBar = searchElement.querySelector(".search-bar") as HTMLInputElement
+  if (!searchBar) return
+
+  const searchLayout = searchElement.querySelector(".search-layout") as HTMLElement
+  if (!searchLayout) return
+
+  const idDataMap = Object.keys(data) as FullSlug[]
+  const appendLayout = (el: HTMLElement) => {
+    searchLayout.appendChild(el)
+  }
+
+  const enablePreview = searchLayout.dataset.preview === "true"
+  let preview: HTMLDivElement | undefined = undefined
+  let previewInner: HTMLDivElement | undefined = undefined
+  const results = document.createElement("div")
+  results.className = "results-container"
+  appendLayout(results)
+
+  if (enablePreview) {
+    preview = document.createElement("div")
+    preview.className = "preview-container"
+    appendLayout(preview)
+  }
+
+  function hideSearch() {
+    container.classList.remove("active")
+    searchBar.value = "" // clear the input when we dismiss the search
+    if (sidebar) sidebar.style.zIndex = ""
+    removeAllChildren(results)
+    if (preview) {
+      removeAllChildren(preview)
+    }
+    searchLayout.classList.remove("display-results")
+    searchType = "basic" // reset search type after closing
+    searchButton.focus()
+  }
+
+  function showSearch(searchTypeNew: SearchType) {
+    searchType = searchTypeNew
+    if (sidebar) sidebar.style.zIndex = "1"
+    container.classList.add("active")
+    searchBar.focus()
+  }
+
+  let currentHover: HTMLInputElement | null = null
+  async function shortcutHandler(e: HTMLElementEventMap["keydown"]) {
+    if (e.key === "k" && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+      e.preventDefault()
+      const searchBarOpen = container.classList.contains("active")
+      searchBarOpen ? hideSearch() : showSearch("basic")
+      return
+    } else if (e.shiftKey && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+      // Hotkey to open tag search
+      e.preventDefault()
+      const searchBarOpen = container.classList.contains("active")
+      searchBarOpen ? hideSearch() : showSearch("tags")
+
+      // add "#" prefix for tag search
+      searchBar.value = "#"
+      return
+    }
+
+    if (currentHover) {
+      currentHover.classList.remove("focus")
+    }
+
+    // If search is active, then we will render the first result and display accordingly
+    if (!container.classList.contains("active")) return
+    if (e.key === "Enter" && !e.isComposing) {
+      // If result has focus, navigate to that one, otherwise pick first result
+      if (results.contains(document.activeElement)) {
+        const active = document.activeElement as HTMLInputElement
+        if (active.classList.contains("no-match")) return
+        await displayPreview(active)
+        active.click()
+      } else {
+        const anchor = document.getElementsByClassName("result-card")[0] as HTMLInputElement | null
+        if (!anchor || anchor.classList.contains("no-match")) return
+        await displayPreview(anchor)
+        anchor.click()
+      }
+    } else if (e.key === "ArrowUp" || (e.shiftKey && e.key === "Tab")) {
+      e.preventDefault()
+      if (results.contains(document.activeElement)) {
+        // If an element in results-container already has focus, focus previous one
+        const currentResult = currentHover
+          ? currentHover
+          : (document.activeElement as HTMLInputElement | null)
+        const prevResult = currentResult?.previousElementSibling as HTMLInputElement | null
+        currentResult?.classList.remove("focus")
+        prevResult?.focus()
+        if (prevResult) currentHover = prevResult
+        await displayPreview(prevResult)
+      }
+    } else if (e.key === "ArrowDown" || e.key === "Tab") {
+      e.preventDefault()
+      // The results should already been focused, so we need to find the next one.
+      // The activeElement is the search bar, so we need to find the first result and focus it.
+      if (document.activeElement === searchBar || currentHover !== null) {
+        const firstResult = currentHover
+          ? currentHover
+          : (document.getElementsByClassName("result-card")[0] as HTMLInputElement | null)
+        const secondResult = firstResult?.nextElementSibling as HTMLInputElement | null
+        firstResult?.classList.remove("focus")
+        secondResult?.focus()
+        if (secondResult) currentHover = secondResult
+        await displayPreview(secondResult)
+      }
+    }
+  }
+
+  const formatForDisplay = (term: string, id: number) => {
+    const slug = idDataMap[id]
+    return {
+      id,
+      slug,
+      title: searchType === "tags" ? data[slug].title : highlight(term, data[slug].title ?? ""),
+      content: highlight(term, data[slug].content ?? "", true),
+      tags: highlightTags(term.substring(1), data[slug].tags),
+    }
+  }
+
+  function highlightTags(term: string, tags: string[]) {
+    if (!tags || searchType !== "tags") {
+      return []
+    }
+
+    return tags
+      .map((tag) => {
+        if (tag.toLowerCase().includes(term.toLowerCase())) {
+          return `<li><p class="match-tag">#${tag}</p></li>`
+        } else {
+          return `<li><p>#${tag}</p></li>`
+        }
+      })
+      .slice(0, numTagResults)
+  }
+
+  function resolveUrl(slug: FullSlug): URL {
+    return new URL(resolveRelative(currentSlug, slug), location.toString())
+  }
+
+  const resultToHTML = ({ slug, title, content, tags }: Item) => {
+    const htmlTags = tags.length > 0 ? `<ul class="tags">${tags.join("")}</ul>` : ``
+    const itemTile = document.createElement("a")
+    itemTile.classList.add("result-card")
+    itemTile.id = slug
+    itemTile.href = resolveUrl(slug).toString()
+    itemTile.innerHTML = `
+      <h3 class="card-title">${title}</h3>
+      ${htmlTags}
+      <p class="card-description">${content}</p>
+    `
+    itemTile.addEventListener("click", (event) => {
+      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return
+      hideSearch()
+    })
+
+    const handler = (event: MouseEvent) => {
+      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return
+      hideSearch()
+    }
+
+    async function onMouseEnter(ev: MouseEvent) {
+      if (!ev.target) return
+      const target = ev.target as HTMLInputElement
+      await displayPreview(target)
+    }
+
+    itemTile.addEventListener("mouseenter", onMouseEnter)
+    window.addCleanup(() => itemTile.removeEventListener("mouseenter", onMouseEnter))
+    itemTile.addEventListener("click", handler)
+    window.addCleanup(() => itemTile.removeEventListener("click", handler))
+
+    return itemTile
+  }
+
+  async function displayResults(finalResults: Item[]) {
+    removeAllChildren(results)
+    if (finalResults.length === 0) {
+      results.innerHTML = `<a class="result-card no-match">
+          <h3>No results.</h3>
+          <p>Try another search term?</p>
+      </a>`
+    } else {
+      results.append(...finalResults.map(resultToHTML))
+    }
+
+    if (finalResults.length === 0 && preview) {
+      // no results, clear previous preview
+      removeAllChildren(preview)
+    } else {
+      // focus on first result, then also dispatch preview immediately
+      const firstChild = results.firstElementChild as HTMLElement
+      firstChild.classList.add("focus")
+      currentHover = firstChild as HTMLInputElement
+      await displayPreview(firstChild)
+    }
+  }
+
+  async function fetchContent(slug: FullSlug): Promise<Element[]> {
+    if (fetchContentCache.has(slug)) {
+      return fetchContentCache.get(slug) as Element[]
+    }
+
+    const targetUrl = resolveUrl(slug).toString()
+    const contents = await fetch(targetUrl)
+      .then((res) => res.text())
+      .then((contents) => {
+        if (contents === undefined) {
+          throw new Error(`Could not fetch ${targetUrl}`)
+        }
+        const html = p.parseFromString(contents ?? "", "text/html")
+        normalizeRelativeURLs(html, targetUrl)
+        return [...html.getElementsByClassName("popover-hint")]
+      })
+
+    fetchContentCache.set(slug, contents)
+    return contents
+  }
+
+  async function displayPreview(el: HTMLElement | null) {
+    if (!searchLayout || !enablePreview || !el || !preview) return
+    const slug = el.id as FullSlug
+    const innerDiv = await fetchContent(slug).then((contents) =>
+      contents.flatMap((el) => [...highlightHTML(currentSearchTerm, el as HTMLElement).children]),
+    )
+    previewInner = document.createElement("div")
+    previewInner.classList.add("preview-inner")
+    previewInner.append(...innerDiv)
+    preview.replaceChildren(previewInner)
+
+    // scroll to longest
+    const highlights = [...preview.getElementsByClassName("highlight")].sort(
+      (a, b) => b.innerHTML.length - a.innerHTML.length,
+    )
+    highlights[0]?.scrollIntoView({ block: "start" })
+  }
+
+  async function onType(e: HTMLElementEventMap["input"]) {
+    if (!searchLayout || !index) return
+    currentSearchTerm = (e.target as HTMLInputElement).value
+    searchLayout.classList.toggle("display-results", currentSearchTerm !== "")
+    searchType = currentSearchTerm.startsWith("#") ? "tags" : "basic"
+
+    let searchResults: DefaultDocumentSearchResults<Item>
+    if (searchType === "tags") {
+      currentSearchTerm = currentSearchTerm.substring(1).trim()
+      const separatorIndex = currentSearchTerm.indexOf(" ")
+      if (separatorIndex != -1) {
+        // search by title and content index and then filter by tag (implemented in flexsearch)
+        const tag = currentSearchTerm.substring(0, separatorIndex)
+        const query = currentSearchTerm.substring(separatorIndex + 1).trim()
+        searchResults = await index.searchAsync({
+          query: query,
+          // return at least 10000 documents, so it is enough to filter them by tag (implemented in flexsearch)
+          limit: Math.max(numSearchResults, 10000),
+          index: ["title", "content"],
+          tag: { tags: tag },
+        })
+        for (let searchResult of searchResults) {
+          searchResult.result = searchResult.result.slice(0, numSearchResults)
+        }
+        // set search type to basic and remove tag from term for proper highlightning and scroll
+        searchType = "basic"
+        currentSearchTerm = query
+      } else {
+        // default search by tags index
+        searchResults = await index.searchAsync({
+          query: currentSearchTerm,
+          limit: numSearchResults,
+          index: ["tags"],
+        })
+      }
+    } else if (searchType === "basic") {
+      searchResults = await index.searchAsync({
+        query: currentSearchTerm,
+        limit: numSearchResults,
+        index: ["title", "content"],
+      })
+    }
+
+    const getByField = (field: string): number[] => {
+      const results = searchResults.filter((x) => x.field === field)
+      return results.length === 0 ? [] : ([...results[0].result] as number[])
+    }
+
+    // order titles ahead of content
+    const allIds: Set<number> = new Set([
+      ...getByField("title"),
+      ...getByField("content"),
+      ...getByField("tags"),
+    ])
+    const finalResults = [...allIds].map((id) => formatForDisplay(currentSearchTerm, id))
+    await displayResults(finalResults)
+  }
+
+  document.addEventListener("keydown", shortcutHandler)
+  window.addCleanup(() => document.removeEventListener("keydown", shortcutHandler))
+  searchButton.addEventListener("click", () => showSearch("basic"))
+  window.addCleanup(() => searchButton.removeEventListener("click", () => showSearch("basic")))
+  searchBar.addEventListener("input", onType)
+  window.addCleanup(() => searchBar.removeEventListener("input", onType))
+
+  registerEscapeHandler(container, hideSearch)
+  await fillDocument(data)
+}
+
+/**
+ * Fills flexsearch document with data
+ * @param index index to fill
+ * @param data data to fill index with
+ */
+let indexPopulated = false
+async function fillDocument(data: ContentIndex) {
+  if (indexPopulated) return
+  let id = 0
+  const promises: Array<Promise<unknown>> = []
+  for (const [slug, fileData] of Object.entries<ContentDetails>(data)) {
+    promises.push(
+      index.addAsync(id++, {
+        id,
+        slug: slug as FullSlug,
+        title: fileData.title,
+        content: fileData.content,
+        tags: fileData.tags,
+      }),
+    )
+  }
+
+  await Promise.all(promises)
+  indexPopulated = true
+}
+
+document.addEventListener("nav", async (e: CustomEventMap["nav"]) => {
+  const currentSlug = e.detail.url
+  const data = await fetchData
+  const searchElement = document.getElementsByClassName("search")
+  for (const element of searchElement) {
+    await setupSearch(element, currentSlug, data)
+  }
+})
+
+
+
+
+
+
+
+
+
+
+import type { ContentDetails } from "../../plugins/emitters/contentIndex"
+import {
+  SimulationNodeDatum,
+  SimulationLinkDatum,
+  Simulation,
+  forceSimulation,
+  forceManyBody,
+  forceCenter,
+  forceLink,
+  forceCollide,
+  forceRadial,
+  zoomIdentity,
+  select,
+  drag,
+  zoom,
+} from "d3"
+import { Text, Graphics, Application, Container, Circle } from "pixi.js"
+import { Group as TweenGroup, Tween as Tweened } from "@tweenjs/tween.js"
+import { registerEscapeHandler, removeAllChildren } from "./util"
+import { FullSlug, SimpleSlug, getFullSlug, resolveRelative, simplifySlug } from "../../util/path"
+import { D3Config } from "../Graph"
+
+type GraphicsInfo = {
+  color: string
+  gfx: Graphics
+  alpha: number
+  active: boolean
+}
+
+type NodeData = {
+  id: SimpleSlug
+  text: string
+  tags: string[]
+} & SimulationNodeDatum
+
+type SimpleLinkData = {
+  source: SimpleSlug
+  target: SimpleSlug
+}
+
+type LinkData = {
+  source: NodeData
+  target: NodeData
+} & SimulationLinkDatum<NodeData>
+
+type LinkRenderData = GraphicsInfo & {
+  simulationData: LinkData
+}
+
+type NodeRenderData = GraphicsInfo & {
+  simulationData: NodeData
+  label: Text
+}
+
+const localStorageKey = "graph-visited"
+function getVisited(): Set<SimpleSlug> {
+  return new Set(JSON.parse(localStorage.getItem(localStorageKey) ?? "[]"))
+}
+
+function addToVisited(slug: SimpleSlug) {
+  const visited = getVisited()
+  visited.add(slug)
+  localStorage.setItem(localStorageKey, JSON.stringify([...visited]))
+}
+
+type TweenNode = {
+  update: (time: number) => void
+  stop: () => void
+}
+
+async function renderGraph(graph: HTMLElement, fullSlug: FullSlug) {
+  const slug = simplifySlug(fullSlug)
+  const visited = getVisited()
+  removeAllChildren(graph)
+
+  let {
+    drag: enableDrag,
+    zoom: enableZoom,
+    depth,
+    scale,
+    repelForce,
+    centerForce,
+    linkDistance,
+    fontSize,
+    opacityScale,
+    removeTags,
+    showTags,
+    focusOnHover,
+    enableRadial,
+  } = JSON.parse(graph.dataset["cfg"]!) as D3Config
+
+  const data: Map<SimpleSlug, ContentDetails> = new Map(
+    Object.entries<ContentDetails>(await fetchData).map(([k, v]) => [
+      simplifySlug(k as FullSlug),
+      v,
+    ]),
+  )
+  const links: SimpleLinkData[] = []
+  const tags: SimpleSlug[] = []
+  const validLinks = new Set(data.keys())
+
+  const tweens = new Map<string, TweenNode>()
+  for (const [source, details] of data.entries()) {
+    const outgoing = details.links ?? []
+
+    for (const dest of outgoing) {
+      if (validLinks.has(dest)) {
+        links.push({ source: source, target: dest })
+      }
+    }
+
+    if (showTags) {
+      const localTags = details.tags
+        .filter((tag) => !removeTags.includes(tag))
+        .map((tag) => simplifySlug(("tags/" + tag) as FullSlug))
+
+      tags.push(...localTags.filter((tag) => !tags.includes(tag)))
+
+      for (const tag of localTags) {
+        links.push({ source: source, target: tag })
+      }
+    }
+  }
+
+  const neighbourhood = new Set<SimpleSlug>()
+  const wl: (SimpleSlug | "__SENTINEL")[] = [slug, "__SENTINEL"]
+  if (depth >= 0) {
+    while (depth >= 0 && wl.length > 0) {
+      // compute neighbours
+      const cur = wl.shift()!
+      if (cur === "__SENTINEL") {
+        depth--
+        wl.push("__SENTINEL")
+      } else {
+        neighbourhood.add(cur)
+        const outgoing = links.filter((l) => l.source === cur)
+        const incoming = links.filter((l) => l.target === cur)
+        wl.push(...outgoing.map((l) => l.target), ...incoming.map((l) => l.source))
+      }
+    }
+  } else {
+    validLinks.forEach((id) => neighbourhood.add(id))
+    if (showTags) tags.forEach((tag) => neighbourhood.add(tag))
+  }
+
+  const nodes = [...neighbourhood].map((url) => {
+    const text = url.startsWith("tags/") ? "#" + url.substring(5) : (data.get(url)?.title ?? url)
+    return {
+      id: url,
+      text,
+      tags: data.get(url)?.tags ?? [],
+    }
+  })
+  const graphData: { nodes: NodeData[]; links: LinkData[] } = {
+    nodes,
+    links: links
+      .filter((l) => neighbourhood.has(l.source) && neighbourhood.has(l.target))
+      .map((l) => ({
+        source: nodes.find((n) => n.id === l.source)!,
+        target: nodes.find((n) => n.id === l.target)!,
+      })),
+  }
+
+  const width = graph.offsetWidth
+  const height = Math.max(graph.offsetHeight, 250)
+
+  // we virtualize the simulation and use pixi to actually render it
+  const simulation: Simulation<NodeData, LinkData> = forceSimulation<NodeData>(graphData.nodes)
+    .force("charge", forceManyBody().strength(-100 * repelForce))
+    .force("center", forceCenter().strength(centerForce))
+    .force("link", forceLink(graphData.links).distance(linkDistance))
+    .force("collide", forceCollide<NodeData>((n) => nodeRadius(n)).iterations(3))
+
+  const radius = (Math.min(width, height) / 2) * 0.8
+  if (enableRadial) simulation.force("radial", forceRadial(radius).strength(0.2))
+
+  // precompute style prop strings as pixi doesn't support css variables
+  const cssVars = [
+    "--secondary",
+    "--tertiary",
+    "--gray",
+    "--light",
+    "--lightgray",
+    "--dark",
+    "--darkgray",
+    "--bodyFont",
+  ] as const
+  const computedStyleMap = cssVars.reduce(
+    (acc, key) => {
+      acc[key] = getComputedStyle(document.documentElement).getPropertyValue(key)
+      return acc
+    },
+    {} as Record<(typeof cssVars)[number], string>,
+  )
+
+  // calculate color
+  const color = (d: NodeData) => {
+    const isCurrent = d.id === slug
+    if (isCurrent) {
+      return computedStyleMap["--secondary"]
+    } else if (visited.has(d.id) || d.id.startsWith("tags/")) {
+      return computedStyleMap["--tertiary"]
+    } else {
+      return computedStyleMap["--gray"]
+    }
+  }
+
+  function nodeRadius(d: NodeData) {
+    const numLinks = graphData.links.filter(
+      (l) => l.source.id === d.id || l.target.id === d.id,
+    ).length
+    return 2 + Math.sqrt(numLinks)
+  }
+
+  let hoveredNodeId: string | null = null
+  let hoveredNeighbours: Set<string> = new Set()
+  const linkRenderData: LinkRenderData[] = []
+  const nodeRenderData: NodeRenderData[] = []
+  function updateHoverInfo(newHoveredId: string | null) {
+    hoveredNodeId = newHoveredId
+
+    if (newHoveredId === null) {
+      hoveredNeighbours = new Set()
+      for (const n of nodeRenderData) {
+        n.active = false
+      }
+
+      for (const l of linkRenderData) {
+        l.active = false
+      }
+    } else {
+      hoveredNeighbours = new Set()
+      for (const l of linkRenderData) {
+        const linkData = l.simulationData
+        if (linkData.source.id === newHoveredId || linkData.target.id === newHoveredId) {
+          hoveredNeighbours.add(linkData.source.id)
+          hoveredNeighbours.add(linkData.target.id)
+        }
+
+        l.active = linkData.source.id === newHoveredId || linkData.target.id === newHoveredId
+      }
+
+      for (const n of nodeRenderData) {
+        n.active = hoveredNeighbours.has(n.simulationData.id)
+      }
+    }
+  }
+
+  let dragStartTime = 0
+  let dragging = false
+
+  function renderLinks() {
+    tweens.get("link")?.stop()
+    const tweenGroup = new TweenGroup()
+
+    for (const l of linkRenderData) {
+      let alpha = 1
+
+      // if we are hovering over a node, we want to highlight the immediate neighbours
+      // with full alpha and the rest with default alpha
+      if (hoveredNodeId) {
+        alpha = l.active ? 1 : 0.2
+      }
+
+      l.color = l.active ? computedStyleMap["--gray"] : computedStyleMap["--lightgray"]
+      tweenGroup.add(new Tweened<LinkRenderData>(l).to({ alpha }, 200))
+    }
+
+    tweenGroup.getAll().forEach((tw) => tw.start())
+    tweens.set("link", {
+      update: tweenGroup.update.bind(tweenGroup),
+      stop() {
+        tweenGroup.getAll().forEach((tw) => tw.stop())
+      },
+    })
+  }
+
+  function renderLabels() {
+    tweens.get("label")?.stop()
+    const tweenGroup = new TweenGroup()
+
+    const defaultScale = 1 / scale
+    const activeScale = defaultScale * 1.1
+    for (const n of nodeRenderData) {
+      const nodeId = n.simulationData.id
+
+      if (hoveredNodeId === nodeId) {
+        tweenGroup.add(
+          new Tweened<Text>(n.label).to(
+            {
+              alpha: 1,
+              scale: { x: activeScale, y: activeScale },
+            },
+            100,
+          ),
+        )
+      } else {
+        tweenGroup.add(
+          new Tweened<Text>(n.label).to(
+            {
+              alpha: n.label.alpha,
+              scale: { x: defaultScale, y: defaultScale },
+            },
+            100,
+          ),
+        )
+      }
+    }
+
+    tweenGroup.getAll().forEach((tw) => tw.start())
+    tweens.set("label", {
+      update: tweenGroup.update.bind(tweenGroup),
+      stop() {
+        tweenGroup.getAll().forEach((tw) => tw.stop())
+      },
+    })
+  }
+
+  function renderNodes() {
+    tweens.get("hover")?.stop()
+
+    const tweenGroup = new TweenGroup()
+    for (const n of nodeRenderData) {
+      let alpha = 1
+
+      // if we are hovering over a node, we want to highlight the immediate neighbours
+      if (hoveredNodeId !== null && focusOnHover) {
+        alpha = n.active ? 1 : 0.2
+      }
+
+      tweenGroup.add(new Tweened<Graphics>(n.gfx, tweenGroup).to({ alpha }, 200))
+    }
+
+    tweenGroup.getAll().forEach((tw) => tw.start())
+    tweens.set("hover", {
+      update: tweenGroup.update.bind(tweenGroup),
+      stop() {
+        tweenGroup.getAll().forEach((tw) => tw.stop())
+      },
+    })
+  }
+
+  function renderPixiFromD3() {
+    renderNodes()
+    renderLinks()
+    renderLabels()
+  }
+
+  tweens.forEach((tween) => tween.stop())
+  tweens.clear()
+
+  const app = new Application()
+  await app.init({
+    width,
+    height,
+    antialias: true,
+    autoStart: false,
+    autoDensity: true,
+    backgroundAlpha: 0,
+    preference: "webgpu",
+    resolution: window.devicePixelRatio,
+    eventMode: "static",
+  })
+  graph.appendChild(app.canvas)
+
+  const stage = app.stage
+  stage.interactive = false
+
+  const labelsContainer = new Container<Text>({ zIndex: 3, isRenderGroup: true })
+  const nodesContainer = new Container<Graphics>({ zIndex: 2, isRenderGroup: true })
+  const linkContainer = new Container<Graphics>({ zIndex: 1, isRenderGroup: true })
+  stage.addChild(nodesContainer, labelsContainer, linkContainer)
+
+  for (const n of graphData.nodes) {
+    const nodeId = n.id
+
+    const label = new Text({
+      interactive: false,
+      eventMode: "none",
+      text: n.text,
+      alpha: 0,
+      anchor: { x: 0.5, y: 1.2 },
+      style: {
+        fontSize: fontSize * 15,
+        fill: computedStyleMap["--dark"],
+        fontFamily: computedStyleMap["--bodyFont"],
+      },
+      resolution: window.devicePixelRatio * 4,
+    })
+    label.scale.set(1 / scale)
+
+    let oldLabelOpacity = 0
+    const isTagNode = nodeId.startsWith("tags/")
+    const gfx = new Graphics({
+      interactive: true,
+      label: nodeId,
+      eventMode: "static",
+      hitArea: new Circle(0, 0, nodeRadius(n)),
+      cursor: "pointer",
+    })
+      .circle(0, 0, nodeRadius(n))
+      .fill({ color: isTagNode ? computedStyleMap["--light"] : color(n) })
+      .on("pointerover", (e) => {
+        updateHoverInfo(e.target.label)
+        oldLabelOpacity = label.alpha
+        if (!dragging) {
+          renderPixiFromD3()
+        }
+      })
+      .on("pointerleave", () => {
+        updateHoverInfo(null)
+        label.alpha = oldLabelOpacity
+        if (!dragging) {
+          renderPixiFromD3()
+        }
+      })
+
+    if (isTagNode) {
+      gfx.stroke({ width: 2, color: computedStyleMap["--tertiary"] })
+    }
+
+    nodesContainer.addChild(gfx)
+    labelsContainer.addChild(label)
+
+    const nodeRenderDatum: NodeRenderData = {
+      simulationData: n,
+      gfx,
+      label,
+      color: color(n),
+      alpha: 1,
+      active: false,
+    }
+
+    nodeRenderData.push(nodeRenderDatum)
+  }
+
+  for (const l of graphData.links) {
+    const gfx = new Graphics({ interactive: false, eventMode: "none" })
+    linkContainer.addChild(gfx)
+
+    const linkRenderDatum: LinkRenderData = {
+      simulationData: l,
+      gfx,
+      color: computedStyleMap["--lightgray"],
+      alpha: 1,
+      active: false,
+    }
+
+    linkRenderData.push(linkRenderDatum)
+  }
+
+  let currentTransform = zoomIdentity
+  if (enableDrag) {
+    select<HTMLCanvasElement, NodeData | undefined>(app.canvas).call(
+      drag<HTMLCanvasElement, NodeData | undefined>()
+        .container(() => app.canvas)
+        .subject(() => graphData.nodes.find((n) => n.id === hoveredNodeId))
+        .on("start", function dragstarted(event) {
+          if (!event.active) simulation.alphaTarget(1).restart()
+          event.subject.fx = event.subject.x
+          event.subject.fy = event.subject.y
+          event.subject.__initialDragPos = {
+            x: event.subject.x,
+            y: event.subject.y,
+            fx: event.subject.fx,
+            fy: event.subject.fy,
+          }
+          dragStartTime = Date.now()
+          dragging = true
+        })
+        .on("drag", function dragged(event) {
+          const initPos = event.subject.__initialDragPos
+          event.subject.fx = initPos.x + (event.x - initPos.x) / currentTransform.k
+          event.subject.fy = initPos.y + (event.y - initPos.y) / currentTransform.k
+        })
+        .on("end", function dragended(event) {
+          if (!event.active) simulation.alphaTarget(0)
+          event.subject.fx = null
+          event.subject.fy = null
+          dragging = false
+
+          // if the time between mousedown and mouseup is short, we consider it a click
+          if (Date.now() - dragStartTime < 500) {
+            const node = graphData.nodes.find((n) => n.id === event.subject.id) as NodeData
+            const targ = resolveRelative(fullSlug, node.id)
+            window.spaNavigate(new URL(targ, window.location.toString()))
+          }
+        }),
+    )
+  } else {
+    for (const node of nodeRenderData) {
+      node.gfx.on("click", () => {
+        const targ = resolveRelative(fullSlug, node.simulationData.id)
+        window.spaNavigate(new URL(targ, window.location.toString()))
+      })
+    }
+  }
+
+  if (enableZoom) {
+    select<HTMLCanvasElement, NodeData>(app.canvas).call(
+      zoom<HTMLCanvasElement, NodeData>()
+        .extent([
+          [0, 0],
+          [width, height],
+        ])
+        .scaleExtent([0.25, 4])
+        .on("zoom", ({ transform }) => {
+          currentTransform = transform
+          stage.scale.set(transform.k, transform.k)
+          stage.position.set(transform.x, transform.y)
+
+          // zoom adjusts opacity of labels too
+          const scale = transform.k * opacityScale
+          let scaleOpacity = Math.max((scale - 1) / 3.75, 0)
+          const activeNodes = nodeRenderData.filter((n) => n.active).flatMap((n) => n.label)
+
+          for (const label of labelsContainer.children) {
+            if (!activeNodes.includes(label)) {
+              label.alpha = scaleOpacity
+            }
+          }
+        }),
+    )
+  }
+
+  let stopAnimation = false
+  function animate(time: number) {
+    if (stopAnimation) return
+    for (const n of nodeRenderData) {
+      const { x, y } = n.simulationData
+      if (!x || !y) continue
+      n.gfx.position.set(x + width / 2, y + height / 2)
+      if (n.label) {
+        n.label.position.set(x + width / 2, y + height / 2)
+      }
+    }
+
+    for (const l of linkRenderData) {
+      const linkData = l.simulationData
+      l.gfx.clear()
+      l.gfx.moveTo(linkData.source.x! + width / 2, linkData.source.y! + height / 2)
+      l.gfx
+        .lineTo(linkData.target.x! + width / 2, linkData.target.y! + height / 2)
+        .stroke({ alpha: l.alpha, width: 1, color: l.color })
+    }
+
+    tweens.forEach((t) => t.update(time))
+    app.renderer.render(stage)
+    requestAnimationFrame(animate)
+  }
+
+  requestAnimationFrame(animate)
+  return () => {
+    stopAnimation = true
+    app.destroy()
+  }
+}
+
+let localGraphCleanups: (() => void)[] = []
+let globalGraphCleanups: (() => void)[] = []
+
+function cleanupLocalGraphs() {
+  for (const cleanup of localGraphCleanups) {
+    cleanup()
+  }
+  localGraphCleanups = []
+}
+
+function cleanupGlobalGraphs() {
+  for (const cleanup of globalGraphCleanups) {
+    cleanup()
+  }
+  globalGraphCleanups = []
+}
+
+document.addEventListener("nav", async (e: CustomEventMap["nav"]) => {
+  const slug = e.detail.url
+  addToVisited(simplifySlug(slug))
+
+  async function renderLocalGraph() {
+    cleanupLocalGraphs()
+    const localGraphContainers = document.getElementsByClassName("graph-container")
+    for (const container of localGraphContainers) {
+      localGraphCleanups.push(await renderGraph(container as HTMLElement, slug))
+    }
+  }
+
+  await renderLocalGraph()
+  const handleThemeChange = () => {
+    void renderLocalGraph()
+  }
+
+  document.addEventListener("themechange", handleThemeChange)
+  window.addCleanup(() => {
+    document.removeEventListener("themechange", handleThemeChange)
+  })
+
+  const containers = [...document.getElementsByClassName("global-graph-outer")] as HTMLElement[]
+  async function renderGlobalGraph() {
+    const slug = getFullSlug(window)
+    for (const container of containers) {
+      container.classList.add("active")
+      const sidebar = container.closest(".sidebar") as HTMLElement
+      if (sidebar) {
+        sidebar.style.zIndex = "1"
+      }
+
+      const graphContainer = container.querySelector(".global-graph-container") as HTMLElement
+      registerEscapeHandler(container, hideGlobalGraph)
+      if (graphContainer) {
+        globalGraphCleanups.push(await renderGraph(graphContainer, slug))
+      }
+    }
+  }
+
+  function hideGlobalGraph() {
+    cleanupGlobalGraphs()
+    for (const container of containers) {
+      container.classList.remove("active")
+      const sidebar = container.closest(".sidebar") as HTMLElement
+      if (sidebar) {
+        sidebar.style.zIndex = ""
+      }
+    }
+  }
+
+  async function shortcutHandler(e: HTMLElementEventMap["keydown"]) {
+    if (e.key === "g" && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+      e.preventDefault()
+      const anyGlobalGraphOpen = containers.some((container) =>
+        container.classList.contains("active"),
+      )
+      anyGlobalGraphOpen ? hideGlobalGraph() : renderGlobalGraph()
+    }
+  }
+
+  const containerIcons = document.getElementsByClassName("global-graph-icon")
+  Array.from(containerIcons).forEach((icon) => {
+    icon.addEventListener("click", renderGlobalGraph)
+    window.addCleanup(() => icon.removeEventListener("click", renderGlobalGraph))
+  })
+
+  document.addEventListener("keydown", shortcutHandler)
+  window.addCleanup(() => {
+    document.removeEventListener("keydown", shortcutHandler)
+    cleanupLocalGraphs()
+    cleanupGlobalGraphs()
+  })
+})
+
+
+
+
+
+@use "../../styles/variables.scss" as *;
+
+.graph {
+  & > h3 {
+    font-size: 1rem;
+    margin: 0;
+  }
+
+  & > .graph-outer {
+    border-radius: 5px;
+    border: 1px solid var(--lightgray);
+    box-sizing: border-box;
+    height: 250px;
+    margin: 0.5em 0;
+    position: relative;
+    overflow: hidden;
+
+    & > .global-graph-icon {
+      cursor: pointer;
+      background: none;
+      border: none;
+      color: var(--dark);
+      opacity: 0.5;
+      width: 24px;
+      height: 24px;
+      position: absolute;
+      padding: 0.2rem;
+      margin: 0.3rem;
+      top: 0;
+      right: 0;
+      border-radius: 4px;
+      background-color: transparent;
+      transition: background-color 0.5s ease;
+      cursor: pointer;
+      &:hover {
+        background-color: var(--lightgray);
+      }
+    }
+  }
+
+  & > .global-graph-outer {
+    position: fixed;
+    z-index: 9999;
+    left: 0;
+    top: 0;
+    width: 100vw;
+    height: 100%;
+    backdrop-filter: blur(4px);
+    display: none;
+    overflow: hidden;
+
+    &.active {
+      display: inline-block;
+    }
+
+    & > .global-graph-container {
+      border: 1px solid var(--lightgray);
+      background-color: var(--light);
+      border-radius: 5px;
+      box-sizing: border-box;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      height: 80vh;
+      width: 80vw;
+
+      @media all and not ($desktop) {
+        width: 90%;
+      }
+    }
+  }
+}
+
+
+
+
+import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from "./types"
+// @ts-ignore
+import script from "./scripts/graph.inline"
+import style from "./styles/graph.scss"
+import { i18n } from "../i18n"
+import { classNames } from "../util/lang"
+
+export interface D3Config {
+  drag: boolean
+  zoom: boolean
+  depth: number
+  scale: number
+  repelForce: number
+  centerForce: number
+  linkDistance: number
+  fontSize: number
+  opacityScale: number
+  removeTags: string[]
+  showTags: boolean
+  focusOnHover?: boolean
+  enableRadial?: boolean
+}
+
+interface GraphOptions {
+  localGraph: Partial<D3Config> | undefined
+  globalGraph: Partial<D3Config> | undefined
+}
+
+const defaultOptions: GraphOptions = {
+  localGraph: {
+    drag: true,
+    zoom: true,
+    depth: 1,
+    scale: 1.1,
+    repelForce: 0.5,
+    centerForce: 0.3,
+    linkDistance: 30,
+    fontSize: 0.6,
+    opacityScale: 1,
+    showTags: true,
+    removeTags: [],
+    focusOnHover: false,
+    enableRadial: false,
+  },
+  globalGraph: {
+    drag: true,
+    zoom: true,
+    depth: -1,
+    scale: 0.9,
+    repelForce: 0.5,
+    centerForce: 0.2,
+    linkDistance: 30,
+    fontSize: 0.6,
+    opacityScale: 1,
+    showTags: true,
+    removeTags: [],
+    focusOnHover: true,
+    enableRadial: true,
+  },
+}
+
+export default ((opts?: Partial<GraphOptions>) => {
+  const Graph: QuartzComponent = ({ displayClass, cfg }: QuartzComponentProps) => {
+    const localGraph = { ...defaultOptions.localGraph, ...opts?.localGraph }
+    const globalGraph = { ...defaultOptions.globalGraph, ...opts?.globalGraph }
+    return (
+      <div class={classNames(displayClass, "graph")}>
+        <h3>{i18n(cfg.locale).components.graph.title}</h3>
+        <div class="graph-outer">
+          <div class="graph-container" data-cfg={JSON.stringify(localGraph)}></div>
+          <button class="global-graph-icon" aria-label="Global Graph">
+            <svg
+              version="1.1"
+              xmlns="http://www.w3.org/2000/svg"
+              xmlnsXlink="http://www.w3.org/1999/xlink"
+              x="0px"
+              y="0px"
+              viewBox="0 0 55 55"
+              fill="currentColor"
+              xmlSpace="preserve"
+            >
+              <path
+                d="M49,0c-3.309,0-6,2.691-6,6c0,1.035,0.263,2.009,0.726,2.86l-9.829,9.829C32.542,17.634,30.846,17,29,17
+                s-3.542,0.634-4.898,1.688l-7.669-7.669C16.785,10.424,17,9.74,17,9c0-2.206-1.794-4-4-4S9,6.794,9,9s1.794,4,4,4
+                c0.74,0,1.424-0.215,2.019-0.567l7.669,7.669C21.634,21.458,21,23.154,21,25s0.634,3.542,1.688,4.897L10.024,42.562
+                C8.958,41.595,7.549,41,6,41c-3.309,0-6,2.691-6,6s2.691,6,6,6s6-2.691,6-6c0-1.035-0.263-2.009-0.726-2.86l12.829-12.829
+                c1.106,0.86,2.44,1.436,3.898,1.619v10.16c-2.833,0.478-5,2.942-5,5.91c0,3.309,2.691,6,6,6s6-2.691,6-6c0-2.967-2.167-5.431-5-5.91
+                v-10.16c1.458-0.183,2.792-0.759,3.898-1.619l7.669,7.669C41.215,39.576,41,40.26,41,41c0,2.206,1.794,4,4,4s4-1.794,4-4
+                s-1.794-4-4-4c-0.74,0-1.424,0.215-2.019,0.567l-7.669-7.669C36.366,28.542,37,26.846,37,25s-0.634-3.542-1.688-4.897l9.665-9.665
+                C46.042,11.405,47.451,12,49,12c3.309,0,6-2.691,6-6S52.309,0,49,0z M11,9c0-1.103,0.897-2,2-2s2,0.897,2,2s-0.897,2-2,2
+                S11,10.103,11,9z M6,51c-2.206,0-4-1.794-4-4s1.794-4,4-4s4,1.794,4,4S8.206,51,6,51z M33,49c0,2.206-1.794,4-4,4s-4-1.794-4-4
+                s1.794-4,4-4S33,46.794,33,49z M29,31c-3.309,0-6-2.691-6-6s2.691-6,6-6s6,2.691,6,6S32.309,31,29,31z M47,41c0,1.103-0.897,2-2,2
+                s-2-0.897-2-2s0.897-2,2-2S47,39.897,47,41z M49,10c-2.206,0-4-1.794-4-4s1.794-4,4-4s4,1.794,4,4S51.206,10,49,10z"
+              />
+            </svg>
+          </button>
+        </div>
+        <div class="global-graph-outer">
+          <div class="global-graph-container" data-cfg={JSON.stringify(globalGraph)}></div>
+        </div>
+      </div>
+    )
+  }
+
+  Graph.css = style
+  Graph.afterDOMLoaded = script
+
+  return Graph
+}) satisfies QuartzComponentConstructor
+
+
+
+import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from "./types"
+import legacyStyle from "./styles/legacyToc.scss"
+import modernStyle from "./styles/toc.scss"
+import { classNames } from "../util/lang"
+
+// @ts-ignore
+import script from "./scripts/toc.inline"
+import { i18n } from "../i18n"
+import OverflowListFactory from "./OverflowList"
+import { concatenateResources } from "../util/resources"
+
+interface Options {
+  layout: "modern" | "legacy"
+}
+
+const defaultOptions: Options = {
+  layout: "modern",
+}
+
+let numTocs = 0
+export default ((opts?: Partial<Options>) => {
+  const layout = opts?.layout ?? defaultOptions.layout
+  const { OverflowList, overflowListAfterDOMLoaded } = OverflowListFactory()
+  const TableOfContents: QuartzComponent = ({
+    fileData,
+    displayClass,
+    cfg,
+  }: QuartzComponentProps) => {
+    if (!fileData.toc) {
+      return null
+    }
+
+    const id = `toc-${numTocs++}`
+    return (
+      <div class={classNames(displayClass, "toc")}>
+        <button
+          type="button"
+          class={fileData.collapseToc ? "collapsed toc-header" : "toc-header"}
+          aria-controls={id}
+          aria-expanded={!fileData.collapseToc}
+        >
+          <h3>{i18n(cfg.locale).components.tableOfContents.title}</h3>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="fold"
+          >
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </button>
+        <OverflowList
+          id={id}
+          class={fileData.collapseToc ? "collapsed toc-content" : "toc-content"}
+        >
+          {fileData.toc.map((tocEntry) => (
+            <li key={tocEntry.slug} class={`depth-${tocEntry.depth}`}>
+              <a href={`#${tocEntry.slug}`} data-for={tocEntry.slug}>
+                {tocEntry.text}
+              </a>
+            </li>
+          ))}
+        </OverflowList>
+      </div>
+    )
+  }
+
+  TableOfContents.css = modernStyle
+  TableOfContents.afterDOMLoaded = concatenateResources(script, overflowListAfterDOMLoaded)
+
+  const LegacyTableOfContents: QuartzComponent = ({ fileData, cfg }: QuartzComponentProps) => {
+    if (!fileData.toc) {
+      return null
+    }
+    return (
+      <details class="toc" open={!fileData.collapseToc}>
+        <summary>
+          <h3>{i18n(cfg.locale).components.tableOfContents.title}</h3>
+        </summary>
+        <ul>
+          {fileData.toc.map((tocEntry) => (
+            <li key={tocEntry.slug} class={`depth-${tocEntry.depth}`}>
+              <a href={`#${tocEntry.slug}`} data-for={tocEntry.slug}>
+                {tocEntry.text}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </details>
+    )
+  }
+  LegacyTableOfContents.css = legacyStyle
+
+  return layout === "modern" ? TableOfContents : LegacyTableOfContents
+}) satisfies QuartzComponentConstructor
+
+
+
+@use "../../styles/variables.scss" as *;
+
+.toc {
+  display: flex;
+  flex-direction: column;
+  overflow-y: hidden;
+  min-height: 1.4rem;
+  flex: 0 0.5 auto;
+  &:has(button.toc-header.collapsed) {
+    flex: 0 1 1.4rem;
+  }
+}
+
+button.toc-header {
+  background-color: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  padding: 0;
+  color: var(--dark);
+  display: flex;
+  align-items: center;
+
+  & h3 {
+    font-size: 1rem;
+    display: inline-block;
+    margin: 0;
+  }
+
+  & .fold {
+    margin-left: 0.5rem;
+    transition: transform 0.3s ease;
+    opacity: 0.8;
+  }
+
+  &.collapsed .fold {
+    transform: rotateZ(-90deg);
+  }
+}
+
+ul.toc-content.overflow {
+  list-style: none;
+  position: relative;
+  margin: 0.5rem 0;
+  padding: 0;
+  max-height: calc(100% - 2rem);
+  overscroll-behavior: contain;
+  list-style: none;
+
+  & > li > a {
+    color: var(--dark);
+    opacity: 0.35;
+    transition:
+      0.5s ease opacity,
+      0.3s ease color;
+    &.in-view {
+      opacity: 0.75;
+    }
+  }
+
+  @for $i from 0 through 6 {
+    & .depth-#{$i} {
+      padding-left: calc(1rem * #{$i});
+    }
+  }
+}
+
+
+
+
+
+
+import { QuartzTransformerPlugin } from "../types"
+import { Root } from "mdast"
+import { visit } from "unist-util-visit"
+import { toString } from "mdast-util-to-string"
+import Slugger from "github-slugger"
+
+export interface Options {
+  maxDepth: 1 | 2 | 3 | 4 | 5 | 6
+  minEntries: number
+  showByDefault: boolean
+  collapseByDefault: boolean
+}
+
+const defaultOptions: Options = {
+  maxDepth: 3,
+  minEntries: 1,
+  showByDefault: true,
+  collapseByDefault: false,
+}
+
+interface TocEntry {
+  depth: number
+  text: string
+  slug: string // this is just the anchor (#some-slug), not the canonical slug
+}
+
+const slugAnchor = new Slugger()
+export const TableOfContents: QuartzTransformerPlugin<Partial<Options>> = (userOpts) => {
+  const opts = { ...defaultOptions, ...userOpts }
+  return {
+    name: "TableOfContents",
+    markdownPlugins() {
+      return [
+        () => {
+          return async (tree: Root, file) => {
+            const display = file.data.frontmatter?.enableToc ?? opts.showByDefault
+            if (display) {
+              slugAnchor.reset()
+              const toc: TocEntry[] = []
+              let highestDepth: number = opts.maxDepth
+              visit(tree, "heading", (node) => {
+                if (node.depth <= opts.maxDepth) {
+                  const text = toString(node)
+                  highestDepth = Math.min(highestDepth, node.depth)
+                  toc.push({
+                    depth: node.depth,
+                    text,
+                    slug: slugAnchor.slug(text),
+                  })
+                }
+              })
+
+              if (toc.length > 0 && toc.length > opts.minEntries) {
+                file.data.toc = toc.map((entry) => ({
+                  ...entry,
+                  depth: entry.depth - highestDepth,
+                }))
+                file.data.collapseToc = opts.collapseByDefault
+              }
+            }
+          }
+        },
+      ]
+    },
+  }
+}
+
+declare module "vfile" {
+  interface DataMap {
+    toc: TocEntry[]
+    collapseToc: boolean
+  }
+}
+
+
+
+const observer = new IntersectionObserver((entries) => {
+  for (const entry of entries) {
+    const slug = entry.target.id
+    const tocEntryElements = document.querySelectorAll(`a[data-for="${slug}"]`)
+    const windowHeight = entry.rootBounds?.height
+    if (windowHeight && tocEntryElements.length > 0) {
+      if (entry.boundingClientRect.y < windowHeight) {
+        tocEntryElements.forEach((tocEntryElement) => tocEntryElement.classList.add("in-view"))
+      } else {
+        tocEntryElements.forEach((tocEntryElement) => tocEntryElement.classList.remove("in-view"))
+      }
+    }
+  }
+})
+
+function toggleToc(this: HTMLElement) {
+  this.classList.toggle("collapsed")
+  this.setAttribute(
+    "aria-expanded",
+    this.getAttribute("aria-expanded") === "true" ? "false" : "true",
+  )
+  const content = this.nextElementSibling as HTMLElement | undefined
+  if (!content) return
+  content.classList.toggle("collapsed")
+}
+
+function setupToc() {
+  for (const toc of document.getElementsByClassName("toc")) {
+    const button = toc.querySelector(".toc-header")
+    const content = toc.querySelector(".toc-content")
+    if (!button || !content) return
+    button.addEventListener("click", toggleToc)
+    window.addCleanup(() => button.removeEventListener("click", toggleToc))
+  }
+}
+
+document.addEventListener("nav", () => {
+  setupToc()
+
+  // update toc entry highlighting
+  observer.disconnect()
+  const headers = document.querySelectorAll("h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]")
+  headers.forEach((header) => observer.observe(header))
+})
+
+
+
+
+
+

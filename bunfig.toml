@@ -1,0 +1,4 @@
+# (Optional) bun workspace config
+[install]
+# ensure we use exactly bun.lockb
+lockfile = true

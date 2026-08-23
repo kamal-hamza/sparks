@@ -11,6 +11,11 @@ dist/
 build/
 *.tgz
 
+# Next.js
+.next/
+.vercel/
+next-env.d.ts
+
 # Test coverage
 coverage/
 *.lcov
